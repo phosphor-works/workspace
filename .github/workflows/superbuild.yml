@@ -1,0 +1,143 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The superbuild of every repo's main, nightly, on Arch. It catches API breaks
+# between repos before a release. The packaging nightly checks the installed
+# side (Config files, install rules), which an in-tree build cannot see.
+#
+# Run by hand with `change_set` set to a branch name to build a change that
+# spans repos: every repo that has that branch is checked out on it, every
+# other repo stays on main.
+#
+# Each repo lists its own Arch packages in .github/ci/arch-packages.txt, and
+# this job installs the union of them, so no list is kept here.
+
+name: Superbuild
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      change_set:
+        description: "Branch to build in every repo that has it (empty: main everywhere)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: superbuild-${{ github.ref }}-${{ inputs.change_set }}
+  cancel-in-progress: true
+
+jobs:
+  arch:
+    name: Arch
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    container:
+      image: archlinux:latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: workspace
+    steps:
+      - name: Bootstrap git and Python
+        working-directory: /
+        run: pacman -Syu --noconfirm --needed git python
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: workspace
+
+      # The manifest names SSH URLs for developers. CI clones over HTTPS.
+      - name: Clone every repo
+        run: |
+          set -euo pipefail
+          python -m venv /opt/vcstool
+          /opt/vcstool/bin/pip install --quiet vcstool
+          echo /opt/vcstool/bin >> "$GITHUB_PATH"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          /opt/vcstool/bin/vcs import --skip-existing --input workspace.repos ..
+
+      - name: Check out the change set
+        if: inputs.change_set != ''
+        env:
+          CHANGE_SET: ${{ inputs.change_set }}
+        run: |
+          set -euo pipefail
+          for dir in ../*/; do
+            repo=$(basename "$dir")
+            [ -d "$dir/.git" ] || continue
+            if git -C "$dir" ls-remote --exit-code --heads origin "$CHANGE_SET" >/dev/null; then
+              git -C "$dir" fetch --quiet origin "$CHANGE_SET"
+              git -C "$dir" checkout --quiet -B "$CHANGE_SET" FETCH_HEAD
+              echo "$repo: $CHANGE_SET"
+            fi
+          done
+
+      - name: Record the commits
+        run: vcs export --exact .. > ../snapshot.repos && cat ../snapshot.repos
+
+      - name: Install packages
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(cat ../*/.github/ci/arch-packages.txt \
+            | sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' | sort -u)
+          for try in 1 2 3; do
+            pacman -S --noconfirm --needed "${packages[@]}" && exit 0
+            [ "$try" = 3 ] && exit 1
+            sleep 10
+          done
+
+      - name: Restore the dependency archives
+        uses: actions/cache@v5
+        with:
+          path: workspace/.cache/cpm
+          key: cpm-${{ hashFiles('*/cmake/*Dependencies.cmake') }}
+          restore-keys: cpm-
+
+      - name: Set up the compiler cache
+        run: |
+          {
+            echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache"
+            echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+            echo "CCACHE_NOHASHDIR=true"
+            echo "CCACHE_COMPILERCHECK=content"
+            echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime"
+            echo "CCACHE_MAXSIZE=5G"
+          } >> "$GITHUB_ENV"
+
+      - name: Restore the compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .ccache
+          key: ccache-superbuild-${{ github.run_id }}
+          restore-keys: ccache-superbuild-
+
+      - name: Configure
+        run: cmake --preset dev
+
+      # The presets cap jobs at 3 for 16 GB machines. The runner has 4 cores.
+      - name: Build
+        run: cmake --build --preset dev -j "$(nproc)"
+
+      - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --preset dev -j "$(nproc)"
+
+      - name: Compiler cache statistics
+        if: always()
+        run: ccache --show-stats || true
+
+      # `vcs import --input snapshot.repos` reproduces the failing tree.
+      - name: Upload the snapshot
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: snapshot
+          path: snapshot.repos

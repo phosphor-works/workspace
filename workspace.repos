@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Every phosphor-works repository, cloned as a sibling of this one:
+#
+#   vcs import --skip-existing --input workspace.repos ..
+#
+# --skip-existing leaves a checkout that is already there alone. Without it,
+# vcstool switches it to the branch named here and pulls you off your own.
+# A repo with no `version` has no commits yet.
+repositories:
+  # Libraries
+  phosphor-libs:
+    type: git
+    url: git@github.com:phosphor-works/phosphor-libs.git
+    version: main
+  phosphor-engine-libs:
+    type: git
+    url: git@github.com:phosphor-works/phosphor-engine-libs.git
+    version: main
+  phosphor-shell-libs:
+    type: git
+    url: git@github.com:phosphor-works/phosphor-shell-libs.git
+    version: main
+  phosphor-components:
+    type: git
+    url: git@github.com:phosphor-works/phosphor-components.git
+    version: main
+  phosphor-surface-packs:
+    type: git
+    url: git@github.com:phosphor-works/phosphor-surface-packs.git
+    version: main
+  # Apps
+  PlasmaZones:
+    type: git
+    url: git@github.com:phosphor-works/PlasmaZones.git
+    version: main
+  Lambent:
+    type: git
+    url: git@github.com:phosphor-works/Lambent.git
+    version: main
+  Afterglow:
+    type: git
+    url: git@github.com:phosphor-works/Afterglow.git
+    version: main
+  Facet:
+    type: git
+    url: git@github.com:phosphor-works/Facet.git
+  Phosphor:
+    type: git
+    url: git@github.com:phosphor-works/Phosphor.git
+  # In the manifest, not in the superbuild
+  branding:
+    type: git
+    url: git@github.com:phosphor-works/branding.git
+    version: main
+  packaging:
+    type: git
+    url: git@github.com:phosphor-works/packaging.git
+  design-language:
+    type: git
+    url: git@github.com:phosphor-works/design-language.git
+    version: main
+  phosphor-bots:
+    type: git
+    url: git@github.com:phosphor-works/phosphor-bots.git
+    version: main
+  website:
+    type: git
+    url: git@github.com:phosphor-works/website.git
+    version: main
