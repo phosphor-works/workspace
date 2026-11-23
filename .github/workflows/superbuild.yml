@@ -81,7 +81,7 @@ jobs:
           done
 
       - name: Record the commits
-        run: vcs export --exact .. > ../snapshot.repos && cat ../snapshot.repos
+        run: tools/snapshot > ../snapshot.repos && cat ../snapshot.repos
 
       - name: Install packages
         run: |
