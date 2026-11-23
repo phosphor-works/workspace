@@ -54,11 +54,12 @@ jobs:
           path: workspace
 
       # The manifest names SSH URLs for developers. CI clones over HTTPS.
+      # vcstool imports pkg_resources, which setuptools 81 removed.
       - name: Clone every repo
         run: |
           set -euo pipefail
           python -m venv /opt/vcstool
-          /opt/vcstool/bin/pip install --quiet vcstool
+          /opt/vcstool/bin/pip install --quiet --no-cache-dir vcstool 'setuptools<81'
           echo /opt/vcstool/bin >> "$GITHUB_PATH"
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           /opt/vcstool/bin/vcs import --skip-existing --input workspace.repos ..
