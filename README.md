@@ -90,8 +90,8 @@ it with `@../workspace/claude/conventions.md` and adds its own rules.
 Each repo's `.claude/settings.json` enables the plugins it uses, from the GitHub marketplace. `tools/setup` registers
 this checkout as the marketplace instead, so the plugins load from here: an edit applies at the next session or
 `/reload-plugins`, with no push. Change the plugins only here, never in the installed copy under
-`~/.claude/plugins/`. Keep the keys of a repo's settings in the order `permissions`, `enabledPlugins`,
-`extraKnownMarketplaces`: `claude plugin install` writes them in that order.
+`~/.claude/plugins/`. Commit a repo's settings in the key order that `claude plugin install` writes, or every install reorders them: run
+it once and commit what it leaves.
 
 Check a change with `claude plugin validate .` (the marketplace) or `claude plugin validate plugins/<plugin>`, and
 run the guard's tests with `python3 -I plugins/phosphor-works/hooks/guard/test_guard.py`.

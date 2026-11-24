@@ -34,11 +34,9 @@ closes windows or kills processes there damages their work.
    `run_in_background` and wait for its exit notice. A `--filter` subset that ends sooner can run in the
    foreground.
 
-   `<skill dir>` is the base directory of this skill, which Claude Code gives when the skill loads.
-
    ```sh
    systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 \
-       python3 <skill dir>/headless_native.py > <scratchpad>/native.log 2>&1; echo $?
+       python3 tools/headless_native.py > <scratchpad>/native.log 2>&1; echo $?
    grep -E '^\[  (FAILED|PASSED) |^\[==' <scratchpad>/native.log
    ```
 
@@ -70,7 +68,7 @@ window or a pane, build the `debug` preset (`build-debug`, steps 1 and 2 of "San
 run only them. LeakSanitizer stays off: the Vulkan loader, libdbus and the GPU driver keep memory until the exit.
 
     systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 env ASAN_OPTIONS=detect_leaks=0 \
-        python3 <skill dir>/headless_native.py --binary build-debug/afterglow/afterglow_native_tests \
+        python3 tools/headless_native.py --binary build-debug/afterglow/afterglow_native_tests \
         --filter 'NativeWindow.AWindowWhoseOnlyPaneClosesGoesAfterThePaneAndItsDock:NativeWindow.AWindowDeletedWhileItShowsReachesNoSlotOfItsOwn:NativeWindow.WindowsDeletedWhileTheirChromeLoadsLeaveTheNextChromeSound'
 
 ### Platform themes
