@@ -20,6 +20,8 @@ change one of them so that they agree.
   a workaround to `workspace`.
 - The Claude skills, agents and guard come from the plugins in `workspace/plugins/`. Change them in the `workspace`
   checkout, not in the installed copy under `~/.claude/plugins/`.
+- Traps that cost a session are lessons in `workspace/plugins/phosphor-works/lessons/`, not bullets in a CLAUDE.md.
+  A prompt hook shows the ones that fit. Record a new one with `phosphor-works:record-lesson`.
 
 ## How to work
 

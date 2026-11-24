@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The lesson index's dependencies, installed by tools/setup into its virtualenv.
+fastembed==0.9.1
+sqlite-vec==0.1.9

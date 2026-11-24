@@ -96,5 +96,20 @@ this checkout as the marketplace instead, so the plugins load from here: an edit
 `~/.claude/plugins/`. Commit a repo's settings in the key order that `claude plugin install` writes, or every install reorders them: run
 it once and commit what it leaves.
 
+### Lessons
+
+Traps that cost a session are lessons: one Markdown file each in `plugins/phosphor-works/lessons/`, reviewed in
+pull requests like code. `tools/setup` builds a local SQLite index of them in `~/.local/share/phosphor-works/lessons`
+(sqlite-vec embeddings from a local ONNX model, plus FTS5 keywords), outside git. A prompt hook adds the few lessons
+closest to each prompt for that repo, and `phosphor-works:lessons` searches on demand:
+
+```sh
+sh plugins/phosphor-works/hooks/lessons/lessons.sh search "ctest passed but nothing ran" --repo PlasmaZones
+```
+
+The index follows the files: an added or changed lesson is embedded at the next search or prompt. No lesson text
+leaves the machine. `phosphor-works:record-lesson` says how to write one.
+
 Check a change with `claude plugin validate .` (the marketplace) or `claude plugin validate plugins/<plugin>`, and
-run the guard's tests with `python3 -I plugins/phosphor-works/hooks/guard/test_guard.py`.
+run the guard's tests with `python3 -I plugins/phosphor-works/hooks/guard/test_guard.py` and the lessons' front
+matter with `sh plugins/phosphor-works/hooks/lessons/lessons.sh check`.
