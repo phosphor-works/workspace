@@ -1,0 +1,6 @@
+{
+  "name": "phosphor-works",
+  "description": "Shared tooling for every phosphor-works repo: the command guard, the code-audit loop and record-lesson.",
+  "author": { "name": "fuddlesworth" },
+  "license": "GPL-3.0-or-later"
+}

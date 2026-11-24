@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Checks the Claude Code plugins on every change to them: the guard's tests,
+# the shell scripts, and that every manifest and hooks file is valid JSON with
+# the plugins the marketplace lists.
+
+name: Plugins
+
+on:
+  push:
+    branches: [main]
+    paths: [".claude-plugin/**", "plugins/**", ".github/workflows/plugins.yml"]
+  pull_request:
+    paths: [".claude-plugin/**", "plugins/**", ".github/workflows/plugins.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Guard and manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Guard tests
+        run: python3 -I plugins/phosphor-works/hooks/guard/test_guard.py
+
+      - name: Shell scripts
+        run: sh -n plugins/phosphor-works/hooks/audit-stop.sh
+
+      - name: Manifests
+        run: |
+          python3 -I - <<'EOF'
+          import json, pathlib, sys
+          market = json.loads(pathlib.Path('.claude-plugin/marketplace.json').read_text())
+          failed = False
+          for entry in market['plugins']:
+              root = pathlib.Path(entry['source'])
+              manifest = json.loads((root / '.claude-plugin/plugin.json').read_text())
+              if manifest['name'] != entry['name']:
+                  print(f"{root}: plugin.json names {manifest['name']}, the marketplace {entry['name']}")
+                  failed = True
+              hooks = root / 'hooks/hooks.json'
+              if hooks.exists():
+                  json.loads(hooks.read_text())
+              for skill in (root / 'skills').glob('*/SKILL.md'):
+                  head = skill.read_text().split('---')[1]
+                  if f'name: {skill.parent.name}\n' not in head:
+                      print(f'{skill}: the name in its front matter is not {skill.parent.name}')
+                      failed = True
+          sys.exit(failed)
+          EOF

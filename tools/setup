@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Sets up the dev workspace. Run it again at any time: each step skips what is
+# already done.
+#
+#   tools/setup
+#
+# 1. Clones every repo in workspace.repos that is not there yet, beside this
+#    one. A checkout that exists is left as it is.
+# 2. Registers this checkout as the "phosphor-works" Claude Code plugin
+#    marketplace, at user scope. Each repo's .claude/settings.json names the
+#    GitHub marketplace of the same name. The local one takes its place, so the
+#    plugins load from this checkout and an edit here applies at the next
+#    session or /reload-plugins, with no push.
+# 3. Installs the plugins that each repo's .claude/settings.json enables, at
+#    project scope in that repo. Claude Code needs this once for each clone.
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")/.." && pwd)
+root=$(dirname "$here")
+
+if ! command -v vcs >/dev/null 2>&1; then
+    echo "vcstool is missing. Install it with pip, or from the AUR as python-vcstool." >&2
+    exit 1
+fi
+echo "== Cloning the repos that are missing"
+vcs import --skip-existing --input "$here/workspace.repos" "$root"
+
+if ! command -v claude >/dev/null 2>&1; then
+    echo "Claude Code is not installed: skipping the plugins."
+    exit 0
+fi
+
+echo "== Registering $here as the phosphor-works plugin marketplace"
+if claude plugin marketplace list 2>/dev/null | grep -qF "Folder ($here)"; then
+    echo "already registered"
+else
+    claude plugin marketplace add "$here"
+fi
+
+echo "== Installing the plugins each repo enables"
+for settings in "$root"/*/.claude/settings.json; do
+    repo=$(dirname "$(dirname "$settings")")
+    plugins=$(python3 -I -c '
+import json, sys
+enabled = json.load(open(sys.argv[1])).get("enabledPlugins", {})
+print(" ".join(p for p, on in enabled.items() if on and p.endswith("@phosphor-works")))
+' "$settings")
+    for plugin in $plugins; do
+        (cd "$repo" && claude plugin install "$plugin" --scope project >/dev/null) \
+            && echo "$(basename "$repo"): $plugin"
+    done
+done

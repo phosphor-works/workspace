@@ -18,6 +18,8 @@ on:
   schedule:
     - cron: "17 4 * * *"
   pull_request:
+    # Plugins, conventions and docs do not change what the superbuild builds.
+    paths-ignore: [".claude-plugin/**", "plugins/**", "claude/**", "tools/setup", "**.md"]
   workflow_dispatch:
     inputs:
       change_set:

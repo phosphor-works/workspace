@@ -1,0 +1,24 @@
+{
+  "name": "phosphor-works",
+  "owner": {
+    "name": "phosphor-works"
+  },
+  "description": "Claude Code plugins for the phosphor-works repos: shared tooling and one plugin per app.",
+  "plugins": [
+    {
+      "name": "phosphor-works",
+      "source": "./plugins/phosphor-works",
+      "description": "Shared tooling for every phosphor-works repo: the command guard, the code-audit loop and record-lesson."
+    },
+    {
+      "name": "plasmazones",
+      "source": "./plugins/plasmazones",
+      "description": "PlasmaZones skills and agents: build, live verification, settings, Luau algorithms, shader packs and themes, domain reviewers and triage."
+    },
+    {
+      "name": "afterglow",
+      "source": "./plugins/afterglow",
+      "description": "Afterglow skills and agents: build, live verification, debugging, settings, script API, shader packs and domain reviewers."
+    }
+  ]
+}
