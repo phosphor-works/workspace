@@ -83,6 +83,11 @@ jobs:
             fi
           done
 
+      # Every repository holds the same shared files (.clang-format,
+      # .editorconfig, CMakePresets.json, the lefthook remote).
+      - name: Check the shared files
+        run: python3 -I tools/sync --check
+
       - name: Record the commits
         run: tools/snapshot > ../snapshot.repos && cat ../snapshot.repos
 

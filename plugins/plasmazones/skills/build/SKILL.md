@@ -23,9 +23,9 @@ PlasmaZones' own.
 | `build-nounity` | ON | OFF | packager parity and the clangd compile database |
 | `build-make` | ON | ON | Unix Makefiles generator parity; tools OFF, so a green ctest here does not cover the tools |
 
-`build` is what `cmake --preset debug` produces, and `CMakePresets.json` sets
-`BUILD_TESTING` and `BUILD_TOOLS` both ON there. Every moon task configures
-through that preset. Add `BUILD_TOOLS` to the `grep` of the shared skill.
+`build` is what `cmake --preset dev` produces, and `CMakePresets.json` sets
+`BUILD_TESTING` and `BUILD_TOOLS` both ON there. `build-asan` (the `asan`
+preset) adds ASan and UBSan. Add `BUILD_TOOLS` to the `grep` of the shared skill.
 
 ## Configure
 

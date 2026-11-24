@@ -37,6 +37,9 @@ change one of them so that they agree.
   the user's session. The presets build with 3 jobs.
 - A change is finished when it builds with no warnings and its tests pass. A green suite is not proof that a change
   in behavior works: verify it live where the repository's verify skill says so.
+- `.clang-format`, `.editorconfig`, `CMakePresets.json` and the shared git hooks come from `workspace/tools/sync`
+  and `workspace/lefthook/common.yml`. Never change them in a repository: change them in `workspace` and run
+  `tools/sync`. Every C++ repository has the presets `dev` (Debug, `build/`), `release`, `relwithdebinfo` and `asan`.
 - Work on a branch. Never push to `main`. Stage files by name, never with `git add -A` or `git add .`.
 
 ## Commits
@@ -104,6 +107,7 @@ repository.
 - QObjects are owned by their parent. Otherwise use `std::unique_ptr` or `QPointer`. Never use a manual `delete`.
 - `QT_NO_CAST_FROM_ASCII` is on: use `QStringLiteral` for constants and paths, and `QLatin1String` for comparisons
   and JSON keys.
-- Format C++ with `clang-format -i` and QML with `qmlformat -i`. The pre-commit hooks do this for staged files.
+- Format C++ with `clang-format -i` and QML with `qmlformat -i`. Every C++ repository uses the shared
+  `.clang-format`. The pre-commit hooks format the staged files.
 - QML: Qt Quick 6, typed properties instead of `var`, `required property` for mandatory properties, and bindings
   instead of JavaScript assignments. List every QML file of a module in its `qt_add_qml_module`.

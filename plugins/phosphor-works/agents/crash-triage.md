@@ -95,7 +95,7 @@ From the faulting frame, find the object or value that was bad, then where it ca
 
 - **Host processes.** The user's `afterglow` and `aglow-mux`. This session usually runs inside an Afterglow pane, so stopping it stops you. Debug only a test binary, a program from `build/`, or a test's own Afterglow. A program that opens a window runs only in a nested KWin (`afterglow:verify-live`).
 - **Tests.** Most are GoogleTest binaries: add `--gtest_filter='Suite.TheTestThatCrashes'` to the `gdb -batch` command.
-- **Sanitizers.** `build-debug` is the ASan and UBSan tree (`afterglow:build`).
+- **Sanitizers.** `build-asan` (the `asan` preset of every C++ repository) is the ASan and UBSan tree.
 - **Logs.** Logging categories are named `afterglow.<area>`.
 
 ## In Lambent

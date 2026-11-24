@@ -74,7 +74,7 @@ pinned by `static_assert` on size and offsets:
 
 ## Validate
 
-The `debug` preset builds `build/` with tools on. The validator is in the default build; the renderer needs `BUILD_TOOLS=ON`.
+The `dev` preset builds `build/` with tools on. The validator is in the default build; the renderer needs `BUILD_TOOLS=ON`.
 
 ```bash
 cmake --build build --parallel 6 --target plasmazones-shader-validate plasmazones-shader-render

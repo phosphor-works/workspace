@@ -20,6 +20,8 @@ what is specific to changing the workspace itself.
 | `CMakeLists.txt`, `CMakePresets.json` | The superbuild and its presets: everything (`dev`, `release`, `relwithdebinfo`, `asan`) or one app against the sibling libraries (`plasmazones`, `lambent`, `afterglow`, each with `-asan`) |
 | `tools/setup` | Clones the missing repos, registers this checkout as the plugin marketplace, installs the plugins in each repo, sets up the lesson index |
 | `tools/snapshot` | The exact commit of every repo, as a vcstool manifest |
+| `tools/sync`, `sync/` | The files every repo holds the same (`.clang-format`, `.editorconfig`, the generated `CMakePresets.json`), and the check that each repo's `lefthook.yml` pulls the shared hooks. `tools/sync --check` reports drift, nightly too |
+| `lefthook/common.yml` | The shared git hooks: clang-format, qmlformat, the Conventional Commits check |
 | `claude/conventions.md` | The rules every repo's CLAUDE.md imports |
 | `.claude-plugin/marketplace.json`, `plugins/` | The Claude Code plugins: `phosphor-works` (shared) and one per app |
 | `plugins/phosphor-works/lessons/` | The lessons, one file each, that the lesson index searches |
