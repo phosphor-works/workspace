@@ -79,9 +79,12 @@ This repo is a Claude Code plugin marketplace, `phosphor-works`:
 
 | Plugin | Holds |
 | --- | --- |
-| `phosphor-works` | What every repo uses: the command guard (`hooks/guard/`), the code-audit loop and its Stop hook, `record-lesson` |
-| `plasmazones` | PlasmaZones skills (`build`, `verify-live`, `add-setting`, `algorithm-api`, `shader-pack`, `shader-theme`) and agents |
-| `afterglow` | Afterglow skills (`build`, `verify-live`, `debug`, `add-setting`, `script-api`, `shader-pack`) and agents |
+| `phosphor-works` | What every repo uses: the command guard (`hooks/guard/`), the skills `build`, `debug`, `code-audit` (with its Stop hook) and `record-lesson`, the reviewers for the shared stack (`cpp-qt`, `qml`, `wayland`, `build`, `config`, `shader`, `luau`), and `crash-triage`, `source-scout`, `perf-expert` |
+| `plasmazones` | PlasmaZones skills (`build` extras, `verify-live`, `add-setting`, `algorithm-api`, `shader-pack`, `shader-theme`, `review-notes`) and agents (`kwin-compositor-reviewer`, the shader-theme art and critique agents) |
+| `afterglow` | Afterglow skills (`build` extras, `verify-live`, `debug` extras, `add-setting`, `script-api`, `shader-pack`, `review-notes`) and agents (`vt`, `platform`, `render`, `window` reviewers) |
+
+A shared reviewer reads the app plugin's `review-notes/<domain>.md`, which holds that app's past-bug shapes and
+code-specific checks for the domain.
 
 Skills and agents carry the plugin name: `/plasmazones:build`, `phosphor-works:code-audit`,
 `afterglow:vt-reviewer`. `claude/conventions.md` holds the rules every repo follows. Each repo's CLAUDE.md imports

@@ -171,8 +171,8 @@ prototype milestone and final coverage. Independent reviewers have distinct resp
 
 - `plasmazones:shader-material-reviewer`: material, composition, contrast and legibility in actual renders.
 - `plasmazones:shader-motion-reviewer`: action, pacing, continuity and material behavior in playback.
-- `plasmazones:glsl-shader-reviewer`: shader contracts, runtime correctness and cost.
-- `plasmazones:build-data-reviewer`: metadata, curves, set assignments and project rules.
+- `phosphor-works:shader-reviewer`: shader contracts, runtime correctness and cost.
+- `phosphor-works:build-reviewer`: metadata, curves, set assignments and project rules.
 
 Run independent reviews concurrently when slots allow; queue the rest. The parent reconciles
 findings, applies fixes and captures fresh evidence. Revalidate changed packs immediately.

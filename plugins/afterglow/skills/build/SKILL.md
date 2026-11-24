@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Configure, build and test Afterglow, and decide when a build is green. Covers the build directories, the Phosphor libraries built from the pinned phosphor-libs commit, warnings, the CTest suite, and which tests need a GPU or a nested KWin. Use when: build, rebuild, run the tests, run ctest, does it compile, is it green, before committing."
+description: "Configure, build and test Afterglow, on top of phosphor-works:build. Covers the build directories, aglow and aglow-mux, the Phosphor libraries built from the pinned phosphor-libs commit, warnings, the CTest suite, and which tests need a GPU or a nested KWin. Use when: build, rebuild, run the tests, run ctest, does it compile, is it green, before committing."
 ---
 
 <!--
@@ -10,16 +10,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Build and test Afterglow
 
-Run every command from the repository root. `docs/BUILD.md` and `docs/TESTING.md` are the user-facing versions of
-this procedure. This skill adds what a session gets wrong.
+Follow `phosphor-works:build` first: the memory cap, one build at a time with 3 jobs, the warning check,
+`--no-tests=error`, never install, and why subagents never build. This skill adds what is Afterglow's own.
+`docs/BUILD.md` and `docs/TESTING.md` are the user-facing versions of this procedure.
 
 ## The build directories
 
-Check what a directory is before you trust a result from it:
-
-```sh
-grep -E "^(BUILD_TESTING|CMAKE_BUILD_TYPE|AFTERGLOW_[A-Z_]+):" build*/CMakeCache.txt
-```
+Add `AFTERGLOW_[A-Z_]+` to the `grep` of the shared skill to see each directory's options.
 
 | Directory | Type | Tools | Use |
 | --- | --- | --- | --- |
@@ -101,42 +98,24 @@ that names a checkout fails or changes for no reason in this repository, check t
 - Never edit a checkout that a build directory compiles from. Update one only with the user's approval. A Phosphor
   change goes through a phosphor-libs branch and pull request. Tell the user what Phosphor needs.
 - The renderer uses Qt private APIs. After a Qt update, rebuild everything in the capped scope:
-  `systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 cmake --build build --clean-first -j6`.
-- The pinned archives (phosphor-libs, zlib-ng, xxHash, libpng, libjpeg-turbo, libwebp and Little CMS from
+  `systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 cmake --build build --clean-first -j3`.
+- The pinned archives are phosphor-libs, zlib-ng, xxHash, libpng, libjpeg-turbo, libwebp and Little CMS from
   `cmake/AfterglowDependencies.cmake`, and Luau and jsoncons from `cmake/PhosphorDependencies.cmake` in the pinned
-  phosphor-libs tree) download into the CPM cache, `.cache/cpm` in this repository. A configure without network
-  works once that cache holds them, or with `-DAFTERGLOW_DEPS_ARCHIVES` naming a directory that
-  `cmake -DAFTERGLOW_DEPS_FETCH=<dir> -P cmake/AfterglowDependencies.cmake` filled.
+  phosphor-libs tree. Offline, fill the archive directory with
+  `cmake -DAFTERGLOW_DEPS_FETCH=<dir> -P cmake/AfterglowDependencies.cmake`.
 
 ## Build
 
-```sh
-systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 \
-    cmake --build build -j6 2>&1 | tee <scratchpad>/build.log | tail -5
-grep -c "warning:" <scratchpad>/build.log
-```
+The presets set no job count: pass `-j3`, as the shared skill says.
 
-`<scratchpad>` is the session scratchpad directory. Never write logs into the repository.
-
-- Always build and test in the capped scope above. The session runs in the cgroup of the user's Afterglow, and
-  when memory runs out, systemd-oomd kills that whole unit with every window of the user. In the scope, the
-  kernel stops the build at the cap. Run one build or test run at a time.
-- Use `-j6`. The machine has 8 cores, and the user works on it while you build.
-- The build uses `-Wall -Wextra -Wpedantic` with no `-Werror`. A build with warnings is not green. The user treats
-  a warning as a defect. An incremental build shows warnings only for the files it compiled again.
+- The session runs in the cgroup of the user's Afterglow. When memory runs out, systemd-oomd kills that whole unit
+  with every window of the user. The capped scope of the shared skill is not optional here.
 - `QT_NO_KEYWORDS` is on for the whole project: write `Q_EMIT`, `Q_SIGNALS` and `Q_SLOTS`. `QT_NO_CAST_FROM_ASCII`
   is on for the application targets and `afterglow-render`: a raw `"string"` into a `QString` does not compile
   there. Use `QStringLiteral` or `QLatin1String`, also in tests that link those targets.
-- Never install (`cmake --install`, the `install` target), and never use `sudo`. The user installs Afterglow.
-  The one exception: `cmake --install` into a temporary directory (`--prefix` or `DESTDIR` under `/tmp`, or a
-  directory under the build tree, as `aglow_only_build` does), to check the install layout.
+- An install into a directory under the build tree, as `aglow_only_build` does, is also allowed for a layout check.
 
 ## Test
-
-```sh
-systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 \
-    ctest --test-dir build --output-on-failure -j6 2>&1 | tail -15
-```
 
 The suite has about 2,000 tests. All of them must pass. Use `-R PATTERN` while you work, and run the whole suite
 before a commit.
@@ -174,14 +153,7 @@ before a commit.
 
 The guard hook refuses a direct edit of these files.
 
-## Subagents never build
-
-Reviewer and audit subagents read and search. They do not run `cmake`, `ctest` or the test binaries. Parallel
-builds overload the machine and give results that nobody can attribute. The main session builds and tests once,
-serially.
-
 ## Green does not mean it works
 
 A passing suite does not prove that a visible change looks right or that an animation settles. For anything that
 renders, check it with `afterglow_renderpng` (the `afterglow:shader-pack` skill) or in a nested KWin (`afterglow:verify-live`).
-The commit message says what you ran.

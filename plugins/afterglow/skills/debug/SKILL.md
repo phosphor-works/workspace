@@ -1,6 +1,6 @@
 ---
 name: debug
-description: "Find why an Afterglow test or program crashes or hangs: gdb in batch mode, watchpoints for memory that something overwrote, cores with coredumpctl, and gdb in a pane of the afterglow MCP server when the questions span several turns. Use when: crash, segfault, SIGSEGV, SIGABRT, hang, deadlock, core dump, gdb, backtrace, a test that fails in some runs only."
+description: "Afterglow's additions to phosphor-works:debug: which Afterglow processes you may debug, GoogleTest filters, the ASan tree, and gdb in a pane of the afterglow MCP server when the questions span several turns. Use when: crash, segfault, hang, core dump, gdb, backtrace, a test that fails in some runs only, in Afterglow."
 ---
 
 <!--
@@ -8,59 +8,29 @@ SPDX-FileCopyrightText: 2026 fuddlesworth
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Debug a crash or a hang
+# Debug a crash or a hang in Afterglow
 
-A fix explains why the bug happens (CLAUDE.md, "Find the mechanism"). The backtrace of a crash shows where the
-program fell, which is often not where the bad value came from. Find the write that made the value.
+Follow `phosphor-works:debug` first: batch mode, watchpoints, cores, rr and the crash-triage agent. This skill adds
+what is Afterglow's own. A fix explains why the bug happens (CLAUDE.md, "Find the mechanism").
 
 Debug only the processes that you started: a test binary, a program from `build/`, or a test's own Afterglow.
-Never attach to the user's `afterglow` or `aglow-mux`. A program that opens a window runs only in a nested KWin
-(`afterglow:verify-live`).
+Never attach to the user's `afterglow` or `aglow-mux`. This session usually runs in one of their panes. A program
+that opens a window runs only in a nested KWin (`afterglow:verify-live`).
 
-## Batch mode first
+## Tests and builds
 
-One `gdb -batch` call answers most questions. It took 3 tool calls and 20 seconds in a measurement, where gdb in
-a pane took 26 calls and 3 minutes for the same answer.
-
-A crash in one test:
+Most tests are GoogleTest binaries. Narrow the gdb run to the test that crashes:
 
 ```sh
 gdb -q -batch -ex run -ex bt -ex 'info locals' --args build/afterglow/tests/afterglow_config_tests \
     --gtest_filter='Config.TheTestThatCrashes'
 ```
 
-`ctest --test-dir build -R NAME -V` prints the command line of a test, with its environment.
+A memory error that does not crash every time: build `build-debug` with ASan and UBSan (`afterglow:build`) and run
+the test there.
 
-A value that something overwrote: stop before the write, watch the memory, and let the program run. The
-watchpoint stops at the write, with the stack that made it.
-
-```sh
-gdb -q -batch -ex 'break functionBeforeTheWrite' -ex run -ex 'watch -l object.field' -ex continue -ex bt \
-    --args PROGRAM ARGS
-```
-
-`watch -l` watches the address, so it outlives the scope of the expression. `ptype /o TYPE` gives the offsets of
-the fields: an overflow from one field reaches the next.
-
-A hang: start the program in the background, find its PID with `pgrep -a NAME`, and take the stacks of all its
-threads:
-
-```sh
-gdb -q -batch -p PID -ex 'thread apply all bt'
-```
-
-## A crash in some runs only
-
-Do not rerun until it passes. Read the core of a run that failed, then write a test that makes the crash happen
-every time (CLAUDE.md, the native suite lesson).
-
-```sh
-coredumpctl list --since today
-coredumpctl debug PID --debugger-arguments="-q -batch -ex 'thread apply all bt'"
-```
-
-A memory error that does not crash every time: build `build-debug` with ASan and UBSan (`afterglow:build`) and run the
-test there. ASan names the write and the allocation.
+For a crash in some runs only, the native suite lesson in CLAUDE.md applies: read the core, then write a test that
+makes the crash happen every time.
 
 ## gdb in a pane of the agent session
 

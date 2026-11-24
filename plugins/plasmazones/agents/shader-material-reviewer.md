@@ -31,7 +31,7 @@ unknown scale or an unsuitable capture is unverified. Before judging transparent
 background; ask the parent for contextual renders if it is missing. A dark alpha viewer
 background is not evidence of a dark shader fill. Report missing evidence to the parent
 and return a visual verdict marked provisional; the parent owns capture and re-dispatch.
-Contract and ABI questions belong to `plasmazones:glsl-shader-reviewer`, not to this review.
+Contract and ABI questions belong to `phosphor-works:shader-reviewer`, not to this review.
 
 Ground aesthetic findings in the user's brief. Do not compare with bundled themes or
 substitute your preferred palette, motif or intensity. Source inspection may support a

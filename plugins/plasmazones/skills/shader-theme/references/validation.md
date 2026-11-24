@@ -219,7 +219,7 @@ runtime checks could not be performed.
 
 ## 7. Technical review pass
 
-Dispatch `plasmazones:glsl-shader-reviewer` on the new pack directories and `plasmazones:build-data-reviewer`
+Dispatch `phosphor-works:shader-reviewer` on the new pack directories and `phosphor-works:build-reviewer`
 on the metadata, curves and set files. Scope their review to shader contracts, integration,
 runtime correctness and project rules. Fix technical findings and re-run gates 1 to 5.
 These reviewers establish technical correctness. The separate visual development loop in

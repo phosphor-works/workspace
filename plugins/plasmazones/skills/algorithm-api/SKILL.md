@@ -94,7 +94,7 @@ is private to phosphor-scripting.
    `plasmazones/src/settings/services/algorithmscaffold.h`, the writer in `algorithmscaffold.cpp`, the read in
    `algorithmservice.cpp`, and `plasmazones/src/settings/qml/pages/tiling/NewAlgorithmDialog.qml`.
 9. **Bundled algorithms.** Set the flag where it is true. It must match what `tile()` does
-   (`plasmazones:luau-algorithm-reviewer` checks this).
+   (`phosphor-works:luau-reviewer` checks this).
 
 `name`, `description` and each `customParams` `description` are user-facing prose under the CLAUDE.md plain-prose
 rules. `check-conventions.py` only reaches double-quoted `description = "..."` in `plasmazones/data/algorithms/*.luau`.

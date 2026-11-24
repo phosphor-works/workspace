@@ -136,7 +136,7 @@ The tree has no GPU timer, and the renderer's wall clock is startup and readback
   adds a scene capture per frame, `paddingParam` grows the canvas, and buffer passes want `bufferScale` below 1.
 - Pointer: `reach` and `trailSeconds` as small as the effect allows. Animation: `fboExtent: "surface"` and
   `geometryGrid` (cap 128) add cost. Overlay: `multipass`, `bufferFeedback` and `depthBuffer` add passes. Then hand
-  the pack to the `plasmazones:glsl-shader-reviewer` agent.
+  the pack to the `phosphor-works:shader-reviewer` agent.
 
 ## Ship
 
