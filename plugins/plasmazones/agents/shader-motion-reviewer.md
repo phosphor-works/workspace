@@ -40,5 +40,5 @@ reading only as a mask wipe. Route that failure back to art direction; do not ke
 pacing or the same boundary curve when the visible mechanism needs to change. If it persists
 after one repair, request a different approach within the user's brief for the next round.
 Label source-level causal guesses as hypotheses. Keep technical ABI issues for
-`plasmazones:glsl-shader-reviewer` and subjective preferences separate from defects. Do not borrow bundled effects
+`phosphor-works:shader-reviewer` and subjective preferences separate from defects. Do not borrow bundled effects
 as the visual standard or claim that smooth interpolation alone makes appealing motion.
