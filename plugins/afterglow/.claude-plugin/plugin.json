@@ -1,0 +1,6 @@
+{
+  "name": "afterglow",
+  "description": "Afterglow skills and agents: build, live verification, debugging, settings, script API, shader packs and domain reviewers.",
+  "author": { "name": "fuddlesworth" },
+  "license": "GPL-3.0-or-later"
+}
