@@ -26,7 +26,7 @@ gdb -q -batch -ex run -ex bt -ex 'info locals' --args build/afterglow/tests/afte
     --gtest_filter='Config.TheTestThatCrashes'
 ```
 
-A memory error that does not crash every time: build `build-debug` with ASan and UBSan (`afterglow:build`) and run
+A memory error that does not crash every time: build `build-asan` (the `asan` preset) with ASan and UBSan (`afterglow:build`) and run
 the test there.
 
 For a crash in some runs only, the native suite lesson in CLAUDE.md applies: read the core, then write a test that

@@ -24,9 +24,7 @@ Use a preset. A preset turns on `BUILD_TESTING` and picks the generator (Ninja) 
 
 | Repository | Configure presets | Build dir | Notes |
 | --- | --- | --- | --- |
-| Lambent, phosphor-libs, phosphor-engine-libs, phosphor-shell-libs, phosphor-components | `dev` (Debug), `release`, `relwithdebinfo` | `build`, `build-release`, `build-relwithdebinfo` | `cmake --workflow --preset dev` configures, builds and tests. The test presets set `noTestsAction` to `error`. |
-| PlasmaZones | `debug`, `release`, `relwithdebinfo` | `build`, `build-release`, `build-relwithdebinfo` | Also turns on `BUILD_TOOLS`. No workflow presets. |
-| Afterglow | `dev` (RelWithDebInfo), `debug` (ASan and UBSan), `release` | `build`, `build-debug`, `build-release` | No workflow presets. |
+| Every C++ repository: PlasmaZones, Afterglow, Lambent, phosphor-libs, phosphor-engine-libs, phosphor-shell-libs, phosphor-components, phosphor-bots | `dev` (Debug), `release`, `relwithdebinfo`, `asan` (ASan and UBSan at `-O1`) | `build`, else `build-<preset>` | One shared file that `workspace/tools/sync` writes. Each preset has a build, test and workflow preset: `cmake --workflow --preset dev` configures, builds and tests. The test presets set `noTestsAction` to `error`. PlasmaZones also turns on `BUILD_TOOLS`, Afterglow `AFTERGLOW_BUILD_TOOLS`. |
 | `workspace` superbuild | `dev` (Debug), `release`, `relwithdebinfo`, `asan`, and one app alone: `plasmazones`, `lambent`, `afterglow`, each with an `-asan` twin | `build`, else `build-<preset>` | Builds every library from its sibling checkout. Builds and tests run 3 jobs. |
 
 Read the repository's `CMakePresets.json` when you need more: presets change, and this table can fall behind.

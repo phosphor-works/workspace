@@ -35,7 +35,7 @@ PlasmaZones places windows from a daemon (`plasmazonesd`) and draws overlays, an
 
 ## In Afterglow
 
-- **Build.** `build` (the `dev` preset) is RelWithDebInfo, and `build-prof` is the RelWithDebInfo tree for `perf`. Release numbers come from `build-release` (`afterglow:build`).
+- **Build.** Measure in an optimized tree, never in `build` (the `dev` preset is Debug): `build-relwithdebinfo` (the `relwithdebinfo` preset) or `build-prof`, the RelWithDebInfo tree for `perf`. Release numbers come from `build-release` (`afterglow:build`).
 - **Workloads.** `afterglow_renderpng --timings --pixels 3840x2160` for render cost, `afterglow_vtbench` and `afterglow_native_bench` (built with `AFTERGLOW_BUILD_TOOLS=ON`), and a nested KWin (`afterglow:verify-live`) for anything with a window.
 
 ## Expertise to apply

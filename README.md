@@ -73,6 +73,22 @@ Turn an app off with `-DWORKSPACE_BUILD_<App>=OFF` (`PlasmaZones`, `Lambent`, `A
 A build here uses every repo's current checkout, while each app's own CI builds the commits it pins. A failure
 here that an app's CI does not show usually means that app's pin is behind a library's `main`.
 
+## Shared files and hooks
+
+Every repo holds the same `.clang-format` and `.editorconfig`, and every C++ repo the same `CMakePresets.json`:
+`dev` (Debug, `build/`), `release`, `relwithdebinfo` and `asan` (ASan and UBSan at `-O1`), each with a build, test and
+workflow preset. They come from `sync/`, and `sync/repos.json` says which repo gets which, with the cache variables a
+repo adds to its presets. Change them here, never in a repo:
+
+```sh
+tools/sync            # write the shared files into every sibling repo
+tools/sync --check    # report what differs (the nightly runs it too)
+```
+
+The git hooks every repo shares are in `lefthook/common.yml`: clang-format and qmlformat on the staged files, and the
+Conventional Commits check. Each repo's `lefthook.yml` pulls them through `remotes:` and adds only its own commands.
+`tools/setup` runs `lefthook install` in every repo.
+
 ## Claude Code
 
 This repo is a Claude Code plugin marketplace, `phosphor-works`:

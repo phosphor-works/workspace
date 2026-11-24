@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": ".clang-format",
+      "source": "sync/clang-format",
+      "repos": ["PlasmaZones", "Afterglow", "Lambent", "Facet", "Phosphor", "phosphor-libs", "phosphor-engine-libs",
+                "phosphor-shell-libs", "phosphor-components", "phosphor-bots"]
+    },
+    {
+      "path": ".editorconfig",
+      "source": "sync/editorconfig",
+      "repos": "all"
+    }
+  ],
+  "presets": {
+    "PlasmaZones": { "BUILD_TOOLS": "ON" },
+    "Afterglow": { "AFTERGLOW_BUILD_TOOLS": "ON" },
+    "Lambent": {},
+    "phosphor-libs": {},
+    "phosphor-engine-libs": {},
+    "phosphor-shell-libs": {},
+    "phosphor-components": {},
+    "phosphor-bots": {}
+  },
+  "lefthook": "all"
+}

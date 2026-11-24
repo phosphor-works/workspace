@@ -20,11 +20,12 @@ Add `AFTERGLOW_[A-Z_]+` to the `grep` of the shared skill to see each directory'
 
 | Directory | Type | Tools | Use |
 | --- | --- | --- | --- |
-| `build` | RelWithDebInfo (`dev` preset) | ON | Day-to-day work. All the commands below use it. |
+| `build` | Debug (`dev` preset) | ON | Day-to-day work. All the commands below use it. The script tests that hold a handler to its CPU-time limit have thin margins at `-O0`: when one fails here, run it in `build-relwithdebinfo` before you look for a bug. |
+| `build-relwithdebinfo` | RelWithDebInfo (`relwithdebinfo` preset) | ON | Optimized with debug info, as CI and the packages build |
 | `build-release` | Release | ON | Performance numbers and release checks |
 | `build-prof` | RelWithDebInfo | ON | Profiling with `perf` |
 | `build-fuzz` | RelWithDebInfo, clang for C and C++, `AFTERGLOW_BUILD_FUZZERS=ON`, `BUILD_TESTING=OFF` | OFF | The libFuzzer targets `afterglow_vtfuzz`, `afterglow_protofuzz`, `afterglow_imagefuzz` and `afterglow_muxfuzz`, and the seed writer `afterglow_imagefuzz_seeds`, only. Build them by name: the other binaries are not supported there (zlib-ng and the image codecs are instrumented in place). The fuzz option turns `aglow` off. Make it when you fuzz, with the commands in `docs/TESTING.md`. |
-| `build-debug` | Debug with ASan and UBSan at `-O1` (`debug` preset) | — | Make it when you look for memory errors, and before a PR that changes a parser, a protocol or a pane's memory. Build it with `-j2`: at `-j4` the compiles hit the 6 GB cap. `docs/TESTING.md` "Sanitizer build" has the three runs (errors, leaks with `-LE gpu`, native). `aglow` links dynamically there, and `aglow_static` is left out. |
+| `build-asan` | Debug with ASan and UBSan at `-O1` (`asan` preset) | — | Make it when you look for memory errors, and before a PR that changes a parser, a protocol or a pane's memory. Build it with `-j2`: at `-j4` the compiles hit the 6 GB cap. `docs/TESTING.md` "Sanitizer build" has the three runs (errors, leaks with `-LE gpu`, native). `aglow` links dynamically there, and `aglow_static` is left out. |
 
 ## aglow
 
