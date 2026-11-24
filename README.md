@@ -13,7 +13,8 @@ cd workspace
 vcs import --skip-existing --input workspace.repos ..
 ```
 
-Every other repo lands next to `workspace/`. Always pass `--skip-existing`: without it, vcstool switches
+Every other repo lands next to `workspace/`. Then run `tools/setup`, which also sets up the Claude Code plugins
+(see [Claude Code](#claude-code)). It is safe to run again. Always pass `--skip-existing`: without it, vcstool switches
 checkouts that already exist to `main` and takes you off your branch. Install vcstool with pip or from the
 AUR (`python-vcstool`).
 
@@ -71,3 +72,26 @@ Turn an app off with `-DWORKSPACE_BUILD_<App>=OFF` (`PlasmaZones`, `Lambent`, `A
 
 A build here uses every repo's current checkout, while each app's own CI builds the commits it pins. A failure
 here that an app's CI does not show usually means that app's pin is behind a library's `main`.
+
+## Claude Code
+
+This repo is a Claude Code plugin marketplace, `phosphor-works`:
+
+| Plugin | Holds |
+| --- | --- |
+| `phosphor-works` | What every repo uses: the command guard (`hooks/guard/`), the code-audit loop and its Stop hook, `record-lesson` |
+| `plasmazones` | PlasmaZones skills (`build`, `verify-live`, `add-setting`, `algorithm-api`, `shader-pack`, `shader-theme`) and agents |
+| `afterglow` | Afterglow skills (`build`, `verify-live`, `debug`, `add-setting`, `script-api`, `shader-pack`) and agents |
+
+Skills and agents carry the plugin name: `/plasmazones:build`, `phosphor-works:code-audit`,
+`afterglow:vt-reviewer`. `claude/conventions.md` holds the rules every repo follows. Each repo's CLAUDE.md imports
+it with `@../workspace/claude/conventions.md` and adds its own rules.
+
+Each repo's `.claude/settings.json` enables the plugins it uses, from the GitHub marketplace. `tools/setup` registers
+this checkout as the marketplace instead, so the plugins load from here: an edit applies at the next session or
+`/reload-plugins`, with no push. Change the plugins only here, never in the installed copy under
+`~/.claude/plugins/`. Keep the keys of a repo's settings in the order `permissions`, `enabledPlugins`,
+`extraKnownMarketplaces`: `claude plugin install` writes them in that order.
+
+Check a change with `claude plugin validate .` (the marketplace) or `claude plugin validate plugins/<plugin>`, and
+run the guard's tests with `python3 -I plugins/phosphor-works/hooks/guard/test_guard.py`.
