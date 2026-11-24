@@ -117,20 +117,23 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .ccache
-          key: ccache-superbuild-${{ github.run_id }}
-          restore-keys: ccache-superbuild-
+          key: ccache-superbuild-relwithdebinfo-${{ github.run_id }}
+          restore-keys: ccache-superbuild-relwithdebinfo-
 
+      # Optimized with debug info, as each app's own CI and the packages build.
+      # The scripting tests hold handlers to CPU-time limits, and at -O0 on a
+      # shared runner they pass them (Afterglow's 20 ms on_* limit).
       - name: Configure
-        run: cmake --preset dev
+        run: cmake --preset relwithdebinfo
 
       # The presets cap jobs at 3 for 16 GB machines. The runner has 4 cores.
       - name: Build
-        run: cmake --build --preset dev -j "$(nproc)"
+        run: cmake --build --preset relwithdebinfo -j "$(nproc)"
 
       - name: Test
         env:
           QT_QPA_PLATFORM: offscreen
-        run: ctest --preset dev -j "$(nproc)"
+        run: ctest --preset relwithdebinfo -j "$(nproc)"
 
       - name: Compiler cache statistics
         if: always()
