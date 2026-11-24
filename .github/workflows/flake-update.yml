@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Every week, update flake.lock in each phosphor-works repository with a
+# flake.nix, and open a pull request where it changed.
+#
+# The pull requests are opened with a token of the phosphor-works bot (a
+# GitHub App), not with the workflow's own token, for two reasons: GitHub
+# refuses to let the workflow token open pull requests in these repositories,
+# and it runs no CI on a pull request that the workflow token opened. With the
+# app token, each update runs the repository's full CI before it is merged.
+#
+# The app needs Contents and Pull requests (read and write) on the
+# repositories below. Its client ID is the repository variable
+# PHOSPHOR_BOT_CLIENT_ID and its private key the secret PHOSPHOR_BOT_PRIVATE_KEY.
+
+name: Flake update
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: ${{ matrix.repo }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # The repositories with a flake.nix.
+        repo:
+          - PlasmaZones
+          - Afterglow
+          - Lambent
+          - phosphor-libs
+          - phosphor-engine-libs
+          - phosphor-shell-libs
+          - phosphor-components
+    steps:
+      - name: Get the bot token
+        id: token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
+        with:
+          client-id: ${{ vars.PHOSPHOR_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.PHOSPHOR_BOT_PRIVATE_KEY }}
+          owner: phosphor-works
+          repositories: ${{ matrix.repo }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          repository: phosphor-works/${{ matrix.repo }}
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24  # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@834c491b2ece4de0bbd00d85214bb5e83b4da5c6  # v28
+        with:
+          token: ${{ steps.token.outputs.token }}
+          branch: chore/flake-lock
+          commit-msg: "chore(nix): update flake.lock"
+          pr-title: "chore(nix): update flake.lock"
+          pr-labels: |
+            dependencies
+            nix
+          pr-body: |
+            The weekly update of flake.lock, from the workspace repository's Flake update workflow.
+
+            ```
+            {{ env.GIT_COMMIT_MESSAGE }}
+            ```
