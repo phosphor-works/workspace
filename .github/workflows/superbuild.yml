@@ -60,7 +60,8 @@ jobs:
           set -euo pipefail
           python -m venv /opt/vcstool
           /opt/vcstool/bin/pip install --quiet --no-cache-dir vcstool 'setuptools<81'
-          echo /opt/vcstool/bin >> "$GITHUB_PATH"
+          # Not on PATH: CMake would find the virtualenv's python, which has
+          # none of the system Python modules the tests use (python-dbus).
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           /opt/vcstool/bin/vcs import --skip-existing --input workspace.repos ..
 
