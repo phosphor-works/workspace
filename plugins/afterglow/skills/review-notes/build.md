@@ -9,7 +9,7 @@ Read by `phosphor-works:build-reviewer` in addition to its own instructions.
 
 - Covers every CMakeLists.txt (`mux/CMakeLists.txt` and `mux/tests/CMakeLists.txt` included) and `cmake/**`: `AfterglowPhosphor.cmake`, and `AfterglowDependencies.cmake` with the zlib-ng, xxHash, libpng, libjpeg-turbo, libwebp and Little CMS archive pins, with `tools/aglow/CheckStatic.cmake` and `tools/aglow/AglowOnlyCheck.cmake`.
 - Also covers `libs/afterglow-image/notices/**`, `tools/aglow/notices/**`, `CMakePresets.json`, `REUSE.toml` and `LICENSES/`.
-- Test code: the GTest and Python harnesses in `afterglow/tests/**` (`mcp_session.py`, the runner of `afterglow mcp` against a private daemon, included), `libs/*/tests/**`, `mux/tests/**` and `tools/aglow/tests/**`.
+- Test code: the GTest and Python harnesses in `afterglow/tests/**` (`mcp_session.py`, the runner of `afterglow mcp` against a private daemon, and `ctl_run.py`, the runner of `afterglow ctl run` and `wait`, included), `libs/*/tests/**`, `mux/tests/**` and `tools/aglow/tests/**`.
 - Tools and data: `tools/bench/**` with the recorded results in `data/benchmarks/**`, `tools/*.py`, `tools/headless_native.py`, `data/*.desktop`, the AppStream metainfo and `data/icons/**`.
 - Documents: `README.md`, `CHANGELOG.md`, `docs/**`, and the `README.md`, `PERFORMANCE.md`, `validation-results.json` and `preview.webp` of the `examples/glasshouse` and `examples/phosphor` demos.
 - Session tooling: `CLAUDE.md`, `.gitignore`, `.mcp.json` and `.claude/settings.json`. The guard hook, the skills and the reviewer definitions are in the workspace repo's Claude plugins.
