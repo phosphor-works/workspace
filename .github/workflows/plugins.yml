@@ -30,7 +30,12 @@ jobs:
         run: python3 -I plugins/phosphor-works/hooks/guard/test_guard.py
 
       - name: Shell scripts
-        run: sh -n plugins/phosphor-works/hooks/audit-stop.sh
+        run: |
+          sh -n plugins/phosphor-works/hooks/audit-stop.sh
+          sh -n plugins/phosphor-works/hooks/lessons/lessons.sh
+
+      - name: Lessons
+        run: sh plugins/phosphor-works/hooks/lessons/lessons.sh check
 
       - name: Manifests
         run: |

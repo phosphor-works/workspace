@@ -16,6 +16,9 @@
 #    session or /reload-plugins, with no push.
 # 3. Installs the plugins that each repo's .claude/settings.json enables, at
 #    project scope in that repo. Claude Code needs this once for each clone.
+# 4. Sets up the lesson index: a virtualenv with the pinned dependencies in
+#    ~/.local/share/phosphor-works/lessons, the local embedding model (about
+#    65 MB, downloaded once) and the index of the lesson files.
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")/.." && pwd)
@@ -53,3 +56,13 @@ print(" ".join(p for p, on in enabled.items() if on and p.endswith("@phosphor-wo
             && echo "$(basename "$repo"): $plugin"
     done
 done
+
+echo "== Setting up the lesson index"
+lessons="$here/plugins/phosphor-works/hooks/lessons"
+data="${PHOSPHOR_LESSONS_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/phosphor-works/lessons}"
+if [ ! -x "$data/venv/bin/python" ]; then
+    mkdir -p "$data"
+    python3 -m venv "$data/venv"
+fi
+"$data/venv/bin/python" -m pip install --quiet --disable-pip-version-check -r "$lessons/requirements.txt"
+sh "$lessons/lessons.sh" index
