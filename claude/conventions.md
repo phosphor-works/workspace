@@ -40,6 +40,10 @@ change one of them so that they agree.
 - `.clang-format`, `.editorconfig`, `CMakePresets.json` and the shared git hooks come from `workspace/tools/sync`
   and `workspace/lefthook/common.yml`. Never change them in a repository: change them in `workspace` and run
   `tools/sync`. Every C++ repository has the presets `dev` (Debug, `build/`), `release`, `relwithdebinfo` and `asan`.
+- Example programs live in `examples/` at the repository root, never inside a library or app directory. They are
+  built only with an option that is off by default (`PHOSPHOR_LIBS_BUILD_EXAMPLES`,
+  `PHOSPHOR_SHELL_LIBS_BUILD_EXAMPLES`), so CI and the apps never build them. A test that needs an example builds it
+  as its own fixture or reads it as data, so the example cannot fall behind.
 - Work on a branch. Never push to `main`. Stage files by name, never with `git add -A` or `git add .`.
 
 ## Commits
