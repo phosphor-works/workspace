@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Keep the files every phosphor-works repository shares the same everywhere.
+
+  tools/sync                 write the shared files into every sibling repository
+  tools/sync --check         report every file that differs, and exit 1 if any does
+  tools/sync --repo NAME     only that repository (repeatable)
+
+sync/repos.json says what goes where:
+- "files": files copied as they are (.clang-format, .editorconfig).
+- "presets": the repositories that get the shared CMakePresets.json, each with
+  the cache variables of its own that every preset sets (PlasmaZones'
+  BUILD_TOOLS). The presets are dev (Debug, into build/), release,
+  relwithdebinfo and asan (ASan and UBSan at -O1), with a build, test and
+  workflow preset for each.
+- "lefthook": the repositories whose lefthook.yml must pull the shared hooks
+  (lefthook/common.yml) through `remotes:`. A repository without one gets a
+  lefthook.yml that only does that. One with commands of its own is checked,
+  not rewritten.
+
+Change a shared file here, run tools/sync, and commit the result in each
+repository. A repository never edits these files itself.
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent.parent
+ROOT = HERE.parent
+MANIFEST = json.loads((HERE / 'sync/repos.json').read_text())
+
+REMOTE_URL = 'https://github.com/phosphor-works/workspace'
+REMOTE_CONFIG = 'lefthook/common.yml'
+LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: CC0-1.0
+#
+# Git hooks (https://github.com/evilmartians/lefthook). The shared ones (clang-format,
+# qmlformat, the Conventional Commits check) come from the workspace repository.
+# `lefthook install` sets them up, and workspace/tools/setup runs it.
+remotes:
+  - git_url: {REMOTE_URL}
+    ref: main
+    configs:
+      - {REMOTE_CONFIG}
+"""
+
+
+def all_repos():
+    names = [line.split(':')[0].strip() for line in (HERE / 'workspace.repos').read_text().splitlines()
+             if line.startswith('  ') and not line.startswith('   ') and line.strip().endswith(':')]
+    return names + ['workspace']
+
+
+def repos_of(spec):
+    return all_repos() if spec == 'all' else list(spec)
+
+
+def repo_dir(name):
+    return HERE if name == 'workspace' else ROOT / name
+
+
+def presets(extra):
+    """The shared CMakePresets.json, with EXTRA cache variables in every preset."""
+    base_vars = {'BUILD_TESTING': 'ON', 'CMAKE_EXPORT_COMPILE_COMMANDS': 'ON', **extra}
+    sanitize = '-O1 -fsanitize=address,undefined -fno-omit-frame-pointer -Wno-maybe-uninitialized'
+    configs = [
+        {'name': 'base', 'hidden': True, 'generator': 'Ninja', 'binaryDir': '${sourceDir}/build-${presetName}',
+         'cacheVariables': base_vars},
+        {'name': 'dev', 'displayName': 'Debug, with tests', 'inherits': 'base', 'binaryDir': '${sourceDir}/build',
+         'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}},
+        {'name': 'release', 'displayName': 'Release, with tests', 'inherits': 'base',
+         'cacheVariables': {'CMAKE_BUILD_TYPE': 'Release'}},
+        {'name': 'relwithdebinfo', 'displayName': 'RelWithDebInfo, with tests', 'inherits': 'base',
+         'cacheVariables': {'CMAKE_BUILD_TYPE': 'RelWithDebInfo'}},
+        {'name': 'asan', 'displayName': 'ASan and UBSan at -O1, with tests', 'inherits': 'base',
+         'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug', 'CMAKE_C_FLAGS': sanitize, 'CMAKE_CXX_FLAGS': sanitize}},
+    ]
+    names = ['dev', 'release', 'relwithdebinfo', 'asan']
+    data = {
+        'version': 6,
+        'cmakeMinimumRequired': {'major': 3, 'minor': 25, 'patch': 0},
+        'configurePresets': configs,
+        'buildPresets': [{'name': n, 'configurePreset': n} for n in names],
+        'testPresets': [{'name': 'base', 'hidden': True, 'output': {'outputOnFailure': True},
+                         'execution': {'noTestsAction': 'error'}}]
+                       + [{'name': n, 'inherits': 'base', 'configurePreset': n} for n in names],
+        'workflowPresets': [{'name': n, 'steps': [{'type': t, 'name': n} for t in ('configure', 'build', 'test')]}
+                            for n in names],
+    }
+    return json.dumps(data, indent=4) + '\n'
+
+
+def expected_files(repo):
+    """{relative path: content} of the files this repository must hold exactly."""
+    out = {}
+    for entry in MANIFEST['files']:
+        if repo in repos_of(entry['repos']):
+            out[entry['path']] = (HERE / entry['source']).read_text()
+    if repo in MANIFEST['presets']:
+        out['CMakePresets.json'] = presets(MANIFEST['presets'][repo])
+    return out
+
+
+def lefthook_problem(path):
+    """Why PATH does not pull the shared hooks, or None."""
+    if not path.exists():
+        return 'missing'
+    text = path.read_text()
+    if REMOTE_URL not in text or REMOTE_CONFIG not in text:
+        return f'does not pull {REMOTE_CONFIG} from {REMOTE_URL} through remotes:'
+    return None
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    parser.add_argument('--check', action='store_true', help='report differences, change nothing')
+    parser.add_argument('--repo', action='append', help='only this repository')
+    args = parser.parse_args()
+    repos = args.repo or all_repos()
+    unknown = set(repos) - set(all_repos())
+    if unknown:
+        parser.error(f'not in workspace.repos: {", ".join(sorted(unknown))}')
+
+    problems, written = [], []
+    for repo in repos:
+        root = repo_dir(repo)
+        if not (root / '.git').exists():
+            print(f'{repo}: not cloned, skipped', file=sys.stderr)
+            continue
+        for rel, content in expected_files(repo).items():
+            path = root / rel
+            if path.exists() and path.read_text() == content:
+                continue
+            if args.check:
+                problems.append(f'{repo}/{rel}: ' + ('missing' if not path.exists() else 'differs from the shared copy'))
+            else:
+                path.write_text(content)
+                written.append(f'{repo}/{rel}')
+        if repo in repos_of(MANIFEST['lefthook']):
+            hook = root / 'lefthook.yml'
+            problem = lefthook_problem(hook)
+            if problem == 'missing' and not args.check:
+                hook.write_text(LEFTHOOK_MINIMAL)
+                written.append(f'{repo}/lefthook.yml')
+            elif problem:
+                problems.append(f'{repo}/lefthook.yml: {problem}')
+
+    for w in written:
+        print(f'wrote {w}')
+    for p in problems:
+        print(p)
+    if problems:
+        print(f'{len(problems)} problem(s). ' + ('Run tools/sync to fix the copies.' if args.check
+                                                    else 'Fix these by hand.'))
+        return 1
+    if args.check:
+        print(f'{len(repos)} repositories match the shared files.')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The git hooks every phosphor-works repository shares: clang-format and
+# qmlformat on the staged files, and the Conventional Commits check on the
+# commit message. Each repository's lefthook.yml pulls this file through
+# `remotes:` and adds only its own commands. `lefthook install` sets the hooks
+# up, and workspace/tools/setup runs it in every repository. CI's lint jobs run
+# the same formatters over the files a change touches.
+
+pre-commit:
+  parallel: true
+  commands:
+    clang-format:
+      glob: "*.{cpp,h,hpp,cc,cxx}"
+      run: clang-format -i {staged_files}
+      stage_fixed: true
+    qmlformat:
+      glob: "*.qml"
+      # The Qt 6 binary is often not on PATH (Arch ships it under
+      # /usr/lib/qt6/bin), and some distributions name it qmlformat6 or
+      # qmlformat-qt6. Try those names on PATH, then the Qt 6 install-bins
+      # directory qtpaths6 or qmake6 reports, then the Arch path, and fail with
+      # a clear message when none is there.
+      run: >
+        sh -c 'for c in qmlformat6 qmlformat-qt6 qmlformat; do command -v "$c" >/dev/null 2>&1 && exec "$c" -i "$@"; done;
+        bins=$(qtpaths6 --query QT_INSTALL_BINS 2>/dev/null || qmake6 -query QT_INSTALL_BINS 2>/dev/null);
+        for p in "$bins/qmlformat" /usr/lib/qt6/bin/qmlformat; do [ -x "$p" ] && exec "$p" -i "$@"; done;
+        echo "qmlformat not found on PATH or under the Qt6 install bins; install the Qt6 declarative tools" >&2; exit 1' sh {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: |
+        msg=$(head -1 {1})
+        # Merge and revert commits keep git's own subject, and fixup and squash
+        # commits (git commit --fixup) are folded into another before they land.
+        if echo "$msg" | grep -qE '^(Merge|Revert|fixup!|squash!) '; then
+          exit 0
+        fi
+        # Conventional Commits: type(scope): description
+        if ! echo "$msg" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'; then
+          echo ""
+          echo "ERROR: Commit message must follow Conventional Commits format:"
+          echo ""
+          echo "  <type>(<scope>): <description>"
+          echo ""
+          echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+          echo "Scope is optional. Examples:"
+          echo "  feat(bar): show the focused window's title"
+          echo "  fix: keep the launcher open while it loads"
+          echo ""
+          echo "Got: $msg"
+          exit 1
+        fi
