@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Writes a vcstool manifest of the exact commit of every repo beside this one,
+# so `vcs import --input <file> <dir>` rebuilds the same tree elsewhere.
+#
+#   tools/snapshot > snapshot.repos
+#
+# vcs export --exact does the same, but stops on a repo with no commits yet and
+# on a commit no remote branch holds (a pull request's merge commit). This
+# skips the first and records the second as it is, with a comment.
+set -euo pipefail
+
+root=$(cd "$(dirname "$0")/../.." && pwd)
+
+echo "repositories:"
+for dir in "$root"/*/; do
+    dir=${dir%/}
+    [ -d "$dir/.git" ] || continue
+    name=$(basename "$dir")
+    commit=$(git -C "$dir" rev-parse -q --verify HEAD) || continue
+    url=$(git -C "$dir" remote get-url origin 2>/dev/null) || continue
+    echo "  $name:"
+    echo "    type: git"
+    echo "    url: $url"
+    if [ -z "$(git -C "$dir" branch -r --contains "$commit" 2>/dev/null)" ]; then
+        echo "    # on no remote branch: push it, or this entry will not import"
+    fi
+    echo "    version: $commit"
+done

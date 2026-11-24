@@ -22,8 +22,11 @@ Across all repos:
 ```sh
 vcs status ..                      # branch and changes in each repo
 vcs pull ..                        # fast-forward every repo
-vcs export --exact .. > snap.repos # the exact commit of every repo
+tools/snapshot > snap.repos        # the exact commit of every repo
 ```
+
+`vcs import --input snap.repos <dir>` rebuilds that tree elsewhere. `tools/snapshot` stands in for
+`vcs export --exact`, which stops on a repo with no commits yet.
 
 ## Build
 
