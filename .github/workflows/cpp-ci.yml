@@ -138,15 +138,18 @@ jobs:
 
       # ccache replays the warnings of a cached compile, so a warning fails
       # every build until it is fixed, not only the first. -k 0 reports every
-      # failing file, not only the first.
+      # failing file, not only the first. Only compiler and linker warnings
+      # count: a tool that the build runs (a fixture checker, say) can print
+      # "warning:" about its input on purpose.
       - name: Build
         shell: bash
         run: |
           set -euo pipefail
           cmake --build --preset "$PRESET" -- -k 0 2>&1 | tee "$RUNNER_TEMP/build.log"
-          if grep -q 'warning:' "$RUNNER_TEMP/build.log"; then
+          pattern=':[0-9]+:[0-9]+: warning:|^(cc1|cc1plus|gcc|g\+\+|clang|clang\+\+|collect2|lto-wrapper|ld|ld\.bfd|ld\.lld|ld\.gold|/usr/bin/ld): warning:'
+          if grep -qE "$pattern" "$RUNNER_TEMP/build.log"; then
             echo "::error::The build has compiler warnings:"
-            grep -B2 -A2 'warning:' "$RUNNER_TEMP/build.log"
+            grep -E -B2 -A2 "$pattern" "$RUNNER_TEMP/build.log"
             exit 1
           fi
 
