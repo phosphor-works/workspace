@@ -7,7 +7,6 @@
 #
 # --skip-existing leaves a checkout that is already there alone. Without it,
 # vcstool switches it to the branch named here and pulls you off your own.
-# A repo with no `version` has no commits yet.
 repositories:
   # Libraries
   phosphor-libs:
@@ -46,9 +45,11 @@ repositories:
   Facet:
     type: git
     url: git@github.com:phosphor-works/Facet.git
+    version: main
   Phosphor:
     type: git
     url: git@github.com:phosphor-works/Phosphor.git
+    version: main
   # In the manifest, not in the superbuild
   branding:
     type: git
@@ -57,6 +58,7 @@ repositories:
   packaging:
     type: git
     url: git@github.com:phosphor-works/packaging.git
+    version: main
   design-language:
     type: git
     url: git@github.com:phosphor-works/design-language.git
