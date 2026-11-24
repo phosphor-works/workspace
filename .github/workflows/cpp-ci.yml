@@ -17,9 +17,9 @@
 #     one shared preset, with a compiler cache. A compiler warning fails the
 #     build. The install is staged in a temporary directory.
 #   * Lint: clang-format and qmlformat over every tracked C++ and QML file.
-#   * Nix: `nix flake check` (the package with its tests in the sandbox), the
-#     package, `nix-verify` on the package, and the dev shell, on x86_64 and
-#     aarch64.
+#   * Nix, where the repository has a flake: `nix flake check` (the package
+#     with its tests in the sandbox), the package, `nix-verify` on the
+#     package, and the dev shell, on x86_64 and aarch64.
 #
 # The repository holds the package lists: .github/ci/arch-packages.txt and,
 # for Fedora, .github/ci/fedora-packages.txt. One package on each line, and
@@ -53,10 +53,14 @@ on:
         description: Minutes for each Nix job.
         type: number
         default: 90
+      nix:
+        description: Run the Nix jobs. False for a repository with no flake.nix.
+        type: boolean
+        default: true
       nix-verify:
         description: Bash that checks the package in ./result. It runs with `set -euo pipefail`.
         type: string
-        required: true
+        default: ""
 
 permissions:
   contents: read
@@ -215,6 +219,7 @@ jobs:
 
   nix:
     name: Nix (${{ matrix.system }})
+    if: inputs.nix
     timeout-minutes: ${{ inputs.nix-timeout }}
     strategy:
       fail-fast: false
