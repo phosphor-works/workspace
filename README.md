@@ -109,6 +109,18 @@ The git hooks every repo shares are in `lefthook/common.yml`: clang-format and q
 Conventional Commits check. Each repo's `lefthook.yml` pulls them through `remotes:` and adds only its own commands.
 `tools/setup` runs `lefthook install` in every repo.
 
+Every repo uses the shared CI (`.github/workflows/cpp-ci.yml`) and the shared hooks at one tag of this repo: `ref`
+in `sync/repos.json`. `tools/sync` writes it into each repo's `ci.yml` and `lefthook.yml`, and `--check` reports a
+repo at another ref. A change to `cpp-ci.yml` or `lefthook/common.yml` reaches the repos in four steps:
+
+1. Merge the change here.
+2. Push the next tag on `main` (`v2` after `v1`). A tag never moves.
+3. Set `ref` to the new tag and run `tools/sync`.
+4. Land the result as one change set (`tools/change`), with the `workspace` change to `ref` in it.
+
+To try a change to `cpp-ci.yml` before it has a tag, point one repo's `ci.yml` at the `workspace` branch on a
+branch of that repo, and do not merge that.
+
 ## Claude Code
 
 This repo is a Claude Code plugin marketplace, `phosphor-works`:

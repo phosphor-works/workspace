@@ -44,7 +44,8 @@ change one of them so that they agree.
 - The C++ CI comes from `workspace/.github/workflows/cpp-ci.yml`. The `ci.yml` of a library, Afterglow or Lambent
   only calls it with what differs (the pin file, the preset, the Nix package check). Change the jobs there, not in a
   repository. A warning fails the build, and the lint checks every tracked C++ and QML file. PlasmaZones still has
-  its own `ci.yml`.
+  its own `ci.yml`. Every repository uses the shared CI and hooks at one tag of `workspace`, which `tools/sync`
+  writes. A change to them reaches the repositories with a new tag and a change set.
 - Example programs live in `examples/` at the repository root, never inside a library or app directory. They are
   built only with an option that is off by default (`PHOSPHOR_LIBS_BUILD_EXAMPLES`,
   `PHOSPHOR_SHELL_LIBS_BUILD_EXAMPLES`), so CI and the apps never build them. A test that needs an example builds it
