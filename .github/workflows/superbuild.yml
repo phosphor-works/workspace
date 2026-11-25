@@ -82,6 +82,12 @@ jobs:
             [ -d "$dir/.git" ] || continue
             if git -C "$dir" ls-remote --exit-code --heads origin "$CHANGE_SET" >/dev/null; then
               git -C "$dir" fetch --quiet origin "$CHANGE_SET"
+              # A branch that main already holds is a part of the set that
+              # merged and whose branch was kept: main is newer than it.
+              if git -C "$dir" merge-base --is-ancestor FETCH_HEAD HEAD; then
+                echo "$repo: $CHANGE_SET is merged, main"
+                continue
+              fi
               git -C "$dir" checkout --quiet -B "$CHANGE_SET" FETCH_HEAD
               echo "$repo: $CHANGE_SET"
             fi
