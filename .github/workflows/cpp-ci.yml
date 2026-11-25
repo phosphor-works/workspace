@@ -162,7 +162,10 @@ jobs:
       - name: Use Clang
         if: matrix.distro == 'arch-clang'
         run: |
-          pacman -S --noconfirm --needed clang
+          # openmp is Clang's OpenMP runtime. GCC has its own, and KF6Kirigami's
+          # CMake package needs OpenMP, so without it a Kirigami app does not
+          # configure under Clang.
+          pacman -S --noconfirm --needed clang openmp
           { echo "CC=clang"; echo "CXX=clang++"; } >> "$GITHUB_ENV"
           clang++ --version
 
