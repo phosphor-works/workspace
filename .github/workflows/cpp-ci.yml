@@ -23,6 +23,12 @@
 #     with its tests in the sandbox), the package, `nix-verify` on the
 #     package, and the dev shell, on x86_64 and aarch64.
 #
+# A pull request that changes only documentation (Markdown, docs/, the
+# license texts, REUSE.toml, the Claude Code settings) builds and tests
+# nothing: the jobs report skipped. A document that a test reads, such as a
+# generated reference that a test compares, goes in `tested-docs` and counts
+# as code. A push to main always builds, which also keeps the caches warm.
+#
 # The repository holds the package lists: .github/ci/arch-packages.txt (for
 # both Arch jobs) and, for Fedora, .github/ci/fedora-packages.txt. One package on each line, and
 # `#` starts a comment.
@@ -67,12 +73,57 @@ on:
         description: Bash that checks the package in ./result. It runs with `set -euo pipefail`.
         type: string
         default: ""
+      tested-docs:
+        description: Documents that a test reads (space-separated paths). A change to one builds and tests.
+        type: string
+        default: ""
 
 permissions:
   contents: read
 
 jobs:
+  # Whether the pull request changes more than documentation. A pull request
+  # is checked out as its merge commit, whose first parent is the base.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Code or only documentation
+        id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          TESTED: ${{ inputs.tested-docs }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=false
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            tested=false
+            for doc in $TESTED; do [ "$file" = "$doc" ] && tested=true; done
+            case "$file" in
+              *.md|docs/*|LICENSES/*|REUSE.toml|.claude/*) "$tested" || { echo "documentation: $file"; continue; } ;;
+            esac
+            echo "code: $file"
+            code=true
+          done < <(git diff --name-only HEAD^1 HEAD)
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # A matrix include that matches no listed distro would add a job, so each
     # distro's values come from its name instead.
     name: ${{ matrix.distro == 'arch' && 'Arch' || matrix.distro == 'arch-clang' && 'Arch (Clang)' || format('Fedora {0}', inputs.fedora-version) }}
@@ -188,6 +239,8 @@ jobs:
 
   lint:
     name: Lint
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
@@ -236,7 +289,8 @@ jobs:
 
   nix:
     name: Nix (${{ matrix.system }})
-    if: inputs.nix
+    needs: changes
+    if: inputs.nix && needs.changes.outputs.code == 'true'
     timeout-minutes: ${{ inputs.nix-timeout }}
     strategy:
       fail-fast: false
