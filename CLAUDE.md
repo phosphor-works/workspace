@@ -20,6 +20,7 @@ what is specific to changing the workspace itself.
 | `CMakeLists.txt`, `CMakePresets.json` | The superbuild and its presets: everything (`dev`, `release`, `relwithdebinfo`, `asan`) or one app against the sibling libraries (`plasmazones`, `lambent`, `afterglow`, each with `-asan`) |
 | `tools/setup` | Clones the missing repos, registers this checkout as the plugin marketplace, installs the plugins in each repo, sets up the lesson index |
 | `tools/snapshot` | The exact commit of every repo, as a vcstool manifest |
+| `tools/new-repo`, `templates/` | A new library repository or program, generated from the templates with every convention, and registered here (`phosphor-works:new-repo`) |
 | `tools/change` | Change sets: the branch in each repo, the linked pull requests, the status of the set, the superbuild of the set |
 | `tools/sync`, `sync/` | The files every repo holds the same (`.clang-format`, `.editorconfig`, the generated `CMakePresets.json`), the check that each repo's `lefthook.yml` pulls the shared hooks, and the workspace tag (`ref`) that every repo uses the shared CI and hooks at. `tools/sync --check` reports drift, nightly too |
 | `lefthook/common.yml` | The shared git hooks: clang-format, qmlformat, the Conventional Commits check |

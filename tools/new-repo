@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Create a phosphor-works repository, set up as every other one is.
+
+  tools/new-repo NAME --kind library --lib LIB --description TEXT
+  tools/new-repo NAME --kind app --description TEXT
+
+A library repository (LGPL-2.1-or-later) holds libraries in libs/, the first one
+LIB (phosphor-<name>), in the shape of phosphor-libs' libraries. An app (GPL-3.0-or-later)
+is in the shape of Afterglow and Lambent: the application in <app>/ (src, qml, tests, data
+with the .desktop file and the AppStream metadata) and its reusable code in
+libs/<app>-core. NAME is the repository name: phosphor-<name>-libs for a library
+repository, the program's name (CamelCase) for an app.
+
+Both build on phosphor-libs, pinned at the commit main has now, and get the shared
+CI (cpp-ci.yml), presets, .clang-format, .editorconfig and git hooks (tools/sync),
+the Claude Code settings, a CLAUDE.md that imports the conventions, REUSE licensing
+and a test. The repository is added to workspace.repos, sync/repos.json and the
+superbuild in this checkout, and git init runs in the new one.
+
+It writes files only. Building, the first commit, the GitHub repository and the
+workspace pull request are the phosphor-works:new-repo skill's steps.
+
+DESCRIPTION is one sentence of user-facing text, ending with a full stop: it goes in
+the README, CLAUDE.md, the .desktop file and the AppStream summary.
+"""
+
+import argparse
+import datetime
+import hashlib
+import io
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import urllib.request
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent.parent
+ROOT = HERE.parent
+TEMPLATES = HERE / 'templates'
+LICENSE_SOURCE = ROOT / 'phosphor-surface-packs' / 'LICENSES'
+PHOSPHOR_LIBS = 'https://github.com/phosphor-works/phosphor-libs'
+
+
+def words(name):
+    """The words of a kebab or CamelCase name, lower case."""
+    spaced = re.sub(r'(?<=[a-z0-9])(?=[A-Z])', '-', name)
+    return [w.lower() for w in re.split(r'[-_]+', spaced) if w]
+
+
+def camel(name):
+    return ''.join(w.capitalize() for w in words(name))
+
+
+def snake(name):
+    return '_'.join(words(name))
+
+
+def pin_phosphor_libs():
+    """(commit, archive SHA-256, CPM version, CPM SHA-256) of phosphor-libs' main now."""
+    out = subprocess.run(['git', 'ls-remote', PHOSPHOR_LIBS, 'refs/heads/main'], capture_output=True, text=True,
+                         check=True).stdout.split()
+    commit = out[0]
+    with urllib.request.urlopen(f'{PHOSPHOR_LIBS}/archive/{commit}.tar.gz', timeout=120) as response:
+        archive = response.read()
+    sha256 = hashlib.sha256(archive).hexdigest()
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        member = next(m for m in tar.getmembers() if m.name.endswith('/cmake/PhosphorDependencies.cmake'))
+        deps = tar.extractfile(member).read().decode()
+    cpm_version = re.search(r'set\(PHOSPHOR_CPM_VERSION "([^"]+)"\)', deps).group(1)
+    cpm_sha256 = re.search(r'set\(PHOSPHOR_CPM_SHA256 "([0-9a-f]{64})"\)', deps).group(1)
+    return commit, sha256, cpm_version, cpm_sha256
+
+
+def library_tokens(lib):
+    target = camel(lib)
+    return {'LIB': lib, 'LIBTARGET': target, 'LIBUPPER': target.upper(), 'liblower': target.lower(),
+            'libsnake': snake(lib)}
+
+
+def render(text, tokens):
+    # Only the known tokens: CMake's own @VAR@ (configure_package_config_file's
+    # @PACKAGE_INIT@) stays as it is.
+    return re.sub(r'@(\w+)@', lambda m: tokens.get(m.group(1), m.group(0)), text)
+
+
+def copy_tree(source, dest, tokens, written):
+    for path in sorted(source.rglob('*')):
+        if path.is_dir():
+            continue
+        rel = render(str(path.relative_to(source)), tokens)
+        if rel.endswith('.in') and not rel.endswith('Config.cmake.in'):
+            rel = rel[:-3]
+        target = dest / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(render(path.read_text(), tokens))
+        written.append(rel)
+
+
+def insert_into_list(text, start_marker, entry):
+    """Adds `entry` as the last item of the CMake set() that starts at start_marker."""
+    start = text.index(start_marker)
+    end = text.index(')', start)
+    body = text[start:end]
+    if re.search(rf'\b{re.escape(entry)}\b', body):
+        return text
+    if '\n' in body:
+        return text[:end].rstrip() + f'\n    {entry}' + text[end:]
+    return text[:end] + f' {entry}' + text[end:]
+
+
+def register(name, kind):
+    repos = HERE / 'workspace.repos'
+    text = repos.read_text()
+    if re.search(rf'^  {re.escape(name)}:$', text, re.M):
+        sys.exit(f'{name} is in workspace.repos already.')
+    entry = (f'  {name}:\n    type: git\n    url: git@github.com:phosphor-works/{name}.git\n    version: main\n')
+    marker = '  # Apps\n' if kind == 'library' else '  # In the manifest, not in the superbuild\n'
+    repos.write_text(text.replace(marker, entry + marker, 1))
+
+    # Edited as text, so the file keeps its layout and the diff is the two entries.
+    manifest = HERE / 'sync' / 'repos.json'
+    text = manifest.read_text()
+    clang = text.index('"path": ".clang-format"')
+    close = text.index(']', clang)
+    text = text[:close] + f',\n                "{name}"' + text[close:]
+    presets = text.index('"presets": {')
+    close = text.index('\n  }', presets)
+    text = text[:close] + f',\n    "{name}": {{}}' + text[close:]
+    json.loads(text)
+    manifest.write_text(text)
+
+    superbuild = HERE / 'CMakeLists.txt'
+    text = superbuild.read_text()
+    text = insert_into_list(text, 'set(WORKSPACE_LIBRARIES' if kind == 'library' else 'set(WORKSPACE_APPS', name)
+    superbuild.write_text(text)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0],
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     epilog=__doc__.split('\n\n', 1)[1])
+    parser.add_argument('name', help='repository name')
+    parser.add_argument('--kind', choices=['library', 'app'], required=True)
+    parser.add_argument('--lib', help='library repository: its first library, phosphor-<name>')
+    parser.add_argument('--description', required=True, help='one sentence, ending with a full stop')
+    args = parser.parse_args()
+
+    name = args.name
+    if not re.fullmatch(r'[A-Za-z][A-Za-z0-9-]*', name):
+        sys.exit(f'{name}: a repository name is letters, digits and hyphens.')
+    if args.kind == 'library' and not args.lib:
+        sys.exit('A library repository needs --lib phosphor-<name>, its first library.')
+    if args.kind == 'library' and not re.fullmatch(r'phosphor-[a-z0-9-]+', args.lib):
+        sys.exit(f'{args.lib}: a library is named phosphor-<name>, in lower case.')
+    description = args.description.strip()
+    if not description.endswith('.'):
+        sys.exit('The description is a sentence: end it with a full stop.')
+    dest = ROOT / name
+    if dest.exists():
+        sys.exit(f'{dest} exists already.')
+    if not LICENSE_SOURCE.is_dir():
+        sys.exit(f'{LICENSE_SOURCE} is missing: clone phosphor-surface-packs (tools/setup).')
+
+    ref = json.loads((HERE / 'sync' / 'repos.json').read_text())['ref']
+    print(f'Pinning phosphor-libs at its main from {PHOSPHOR_LIBS} ...')
+    commit, sha256, cpm_version, cpm_sha256 = pin_phosphor_libs()
+    project = camel(name)
+    prefix = snake(name)
+    tokens = {
+        'REPO': name, 'PROJECT': project, 'PREFIX': prefix.upper(), 'prefix': prefix,
+        'abbr': ''.join(w[0] for w in words(name)), 'DESCRIPTION': description, 'SUMMARY': description[:-1],
+        'YEAR': str(datetime.date.today().year), 'REF': ref, 'PIN_COMMIT': commit, 'PIN_SHA256': sha256,
+        'CPM_VERSION': cpm_version, 'CPM_SHA256': cpm_sha256,
+    }
+    written = []
+    if args.kind == 'library':
+        tokens['LICENSE'] = 'LGPL-2.1-or-later'
+        tokens.update(library_tokens(args.lib))
+        tokens['FORMAT_GLOBS'] = ('        ${CMAKE_CURRENT_SOURCE_DIR}/libs/*.cpp\n'
+                                  '        ${CMAKE_CURRENT_SOURCE_DIR}/libs/*.h')
+        tokens['SUBDIRS'] = f'add_subdirectory(libs/{args.lib})'
+        copy_tree(TEMPLATES / 'common', dest, tokens, written)
+        copy_tree(TEMPLATES / 'library', dest, tokens, written)
+        licenses = ['LGPL-2.1-or-later', 'CC0-1.0']
+    else:
+        app = name.lower()
+        tokens.update({'LICENSE': 'GPL-3.0-or-later', 'app': app, 'AppNs': project, 'AppName': name,
+                       'APPID': f'org.phosphor_works.{project}'})
+        core = f'{app}-core'
+        tokens.update(library_tokens(core))
+        tokens['FORMAT_GLOBS'] = ('        ${CMAKE_CURRENT_SOURCE_DIR}/libs/*.cpp\n'
+                                  '        ${CMAKE_CURRENT_SOURCE_DIR}/libs/*.h\n'
+                                  f'        ${{CMAKE_CURRENT_SOURCE_DIR}}/{app}/*.cpp\n'
+                                  f'        ${{CMAKE_CURRENT_SOURCE_DIR}}/{app}/*.h')
+        tokens['SUBDIRS'] = (f'# The application\'s own libraries, then the application.\n'
+                             f'add_subdirectory(libs/{core})\nadd_subdirectory({app})')
+        copy_tree(TEMPLATES / 'common', dest, tokens, written)
+        copy_tree(TEMPLATES / 'library' / 'libs', dest / 'libs', tokens, written)
+        copy_tree(TEMPLATES / 'app', dest, tokens, written)
+        licenses = ['GPL-3.0-or-later', 'LGPL-2.1-or-later', 'CC0-1.0']
+    (dest / 'LICENSES').mkdir()
+    for license_id in licenses:
+        shutil.copyfile(LICENSE_SOURCE / f'{license_id}.txt', dest / 'LICENSES' / f'{license_id}.txt')
+        written.append(f'LICENSES/{license_id}.txt')
+
+    register(name, args.kind)
+    subprocess.run(['git', 'init', '--quiet', '--initial-branch', 'main', str(dest)], check=True)
+    subprocess.run([sys.executable, str(HERE / 'tools' / 'sync'), '--repo', name], check=True)
+
+    print(f'\nCreated {dest} ({args.kind}), phosphor-libs pinned at {commit[:12]}:')
+    for rel in written:
+        print(f'  {rel}')
+    print('Registered in workspace.repos, sync/repos.json and the superbuild (CMakeLists.txt).')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
