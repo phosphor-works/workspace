@@ -63,6 +63,12 @@ jobs:
       - name: Shared files, CLAUDE.md and pins
         run: python3 -I workspace/tools/sync --check --repo phosphor-sample-libs --repo Sample
 
+      - name: Documents
+        run: |
+          set -euo pipefail
+          python3 -I workspace/tools/sync --check --repo phosphor-sample-libs --documents collection
+          python3 -I workspace/tools/sync --check --repo Sample --documents app
+
       - name: Format
         run: |
           set -euo pipefail
