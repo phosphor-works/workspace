@@ -5,7 +5,7 @@ repos: [all]
 domains: [cpp-qt, design]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 If a caller already swapped in a plausible fallback, the callee cannot tell that the value is not real. Put the

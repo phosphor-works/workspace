@@ -1,13 +1,15 @@
-# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # The superbuild of every repo's main, nightly, on Arch. It catches API breaks
 # between repos before a release. The packaging nightly checks the installed
 # side (Config files, install rules), which an in-tree build cannot see.
 #
-# Run by hand with `change_set` set to a branch name to build a change that
-# spans repos: every repo that has that branch is checked out on it, every
-# other repo stays on main.
+# A change that spans repos is a change set: one branch name in each repo it
+# touches (tools/change). Every repo that has the branch is checked out on it,
+# and every other repo stays on main. A pull request here builds the change set
+# of its own branch. Run by hand with `change_set` set to a branch name to build
+# a set that has no branch here (tools/change build).
 #
 # Each repo lists its own Arch packages in .github/ci/arch-packages.txt, and
 # this job installs the union of them, so no list is kept here.
@@ -19,7 +21,7 @@ on:
     - cron: "17 4 * * *"
   pull_request:
     # Plugins, conventions and docs do not change what the superbuild builds.
-    paths-ignore: [".claude/**", ".claude-plugin/**", "plugins/**", "claude/**", "tools/setup", "**.md", ".github/workflows/cpp-ci.yml", ".github/workflows/flake-update.yml"]
+    paths-ignore: [".claude/**", ".claude-plugin/**", "plugins/**", "claude/**", "tools/setup", "tools/change", "**.md", ".github/workflows/cpp-ci.yml", ".github/workflows/flake-update.yml"]
   workflow_dispatch:
     inputs:
       change_set:
@@ -68,16 +70,24 @@ jobs:
           /opt/vcstool/bin/vcs import --skip-existing --input workspace.repos ..
 
       - name: Check out the change set
-        if: inputs.change_set != ''
+        if: inputs.change_set != '' || github.event_name == 'pull_request'
         env:
-          CHANGE_SET: ${{ inputs.change_set }}
+          CHANGE_SET: ${{ inputs.change_set || github.head_ref }}
         run: |
           set -euo pipefail
           for dir in ../*/; do
             repo=$(basename "$dir")
+            # This checkout is already the commit the run is for.
+            [ "$repo" = workspace ] && continue
             [ -d "$dir/.git" ] || continue
             if git -C "$dir" ls-remote --exit-code --heads origin "$CHANGE_SET" >/dev/null; then
               git -C "$dir" fetch --quiet origin "$CHANGE_SET"
+              # A branch that main already holds is a part of the set that
+              # merged and whose branch was kept: main is newer than it.
+              if git -C "$dir" merge-base --is-ancestor FETCH_HEAD HEAD; then
+                echo "$repo: $CHANGE_SET is merged, main"
+                continue
+              fi
               git -C "$dir" checkout --quiet -B "$CHANGE_SET" FETCH_HEAD
               echo "$repo: $CHANGE_SET"
             fi

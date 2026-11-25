@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The workspace repository. A session started here may touch every app, so it gets the app rules of PlasmaZones
 and Afterglow together (D-Bus and the desktop; the terminal, its mux daemon and its windows), and no sibling-repo

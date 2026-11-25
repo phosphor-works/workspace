@@ -5,7 +5,7 @@ repos: [phosphor-libs, phosphor-engine-libs]
 domains: [build, cmake]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 phosphor-engine-libs fails to configure when an engine reaches `Qt6::Qml` or `Qt6::Quick` anywhere in its link

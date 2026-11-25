@@ -5,7 +5,7 @@ repos: [phosphor-shell-libs, Lambent]
 domains: [qml]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 In `qt_add_qml_module`, listing `org.kde.kirigami` under `IMPORTS` made Kirigami's `Theme` shadow the

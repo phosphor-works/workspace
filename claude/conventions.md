@@ -1,4 +1,4 @@
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 # phosphor-works conventions
@@ -14,8 +14,9 @@ change one of them so that they agree.
 - The `workspace` superbuild builds the libraries and the apps in one tree. Use it to change a library and an app
   together: `cmake --workflow --preset dev` builds everything, and `--preset plasmazones`, `lambent` or `afterglow`
   builds one app against the sibling libraries. Each preset has an `-asan` twin.
-- A change that spans repositories is a change set: one branch name in each repository that it touches. Merge the
-  libraries first. Then move the app's pin to the merged commit.
+- A change that spans repositories is a change set: one branch name in each repository that it touches.
+  `workspace/tools/change` makes the branches, opens the pull requests and links them (`start`, `push`), and shows
+  the set (`status`). Merge the libraries first. Then move the app's pin to the merged commit.
 - When the superbuild or the shared tooling finds a problem in one repository, fix it in that repository. Do not add
   a workaround to `workspace`.
 - The Claude skills, agents and guard come from the plugins in `workspace/plugins/`. Change them in the `workspace`
@@ -43,7 +44,8 @@ change one of them so that they agree.
 - The C++ CI comes from `workspace/.github/workflows/cpp-ci.yml`. The `ci.yml` of a library, Afterglow or Lambent
   only calls it with what differs (the pin file, the preset, the Nix package check). Change the jobs there, not in a
   repository. A warning fails the build, and the lint checks every tracked C++ and QML file. PlasmaZones still has
-  its own `ci.yml`.
+  its own `ci.yml`. Every repository uses the shared CI and hooks at one tag of `workspace`, which `tools/sync`
+  writes. A change to them reaches the repositories with a new tag and a change set.
 - Example programs live in `examples/` at the repository root, never inside a library or app directory. They are
   built only with an option that is off by default (`PHOSPHOR_LIBS_BUILD_EXAMPLES`,
   `PHOSPHOR_SHELL_LIBS_BUILD_EXAMPLES`), so CI and the apps never build them. A test that needs an example builds it
@@ -102,8 +104,10 @@ repository.
 
 ## Licenses
 
-- Every file that can hold a comment starts with `SPDX-FileCopyrightText: 2026 fuddlesworth` and an
-  `SPDX-License-Identifier`.
+- Every file that can hold a comment starts with `SPDX-FileCopyrightText: 2026 Phosphor Works Team` and an
+  `SPDX-License-Identifier`. Phosphor Works Team is the only holder of the project's own work. A file ported from
+  another project also keeps the upstream holder's line, and a contributor's line stays unless the contributor
+  agrees to remove it.
 - Apps, their tests and their tools are `GPL-3.0-or-later`. Libraries, including their own tests, are
   `LGPL-2.1-or-later`.
 - A format with no comment syntax (JSON) has no header. `REUSE.toml` licenses such files where a repository has one.

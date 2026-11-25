@@ -5,7 +5,7 @@ repos: [phosphor-components]
 domains: [i18n]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 `phosphor-components-update-ts` runs `lupdate -no-obsolete`. A QML file left out of the module's file list loses

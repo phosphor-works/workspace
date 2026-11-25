@@ -1,4 +1,4 @@
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 # workspace
@@ -20,12 +20,13 @@ what is specific to changing the workspace itself.
 | `CMakeLists.txt`, `CMakePresets.json` | The superbuild and its presets: everything (`dev`, `release`, `relwithdebinfo`, `asan`) or one app against the sibling libraries (`plasmazones`, `lambent`, `afterglow`, each with `-asan`) |
 | `tools/setup` | Clones the missing repos, registers this checkout as the plugin marketplace, installs the plugins in each repo, sets up the lesson index |
 | `tools/snapshot` | The exact commit of every repo, as a vcstool manifest |
-| `tools/sync`, `sync/` | The files every repo holds the same (`.clang-format`, `.editorconfig`, the generated `CMakePresets.json`), and the check that each repo's `lefthook.yml` pulls the shared hooks. `tools/sync --check` reports drift, nightly too |
+| `tools/change` | Change sets: the branch in each repo, the linked pull requests, the status of the set, the superbuild of the set |
+| `tools/sync`, `sync/` | The files every repo holds the same (`.clang-format`, `.editorconfig`, the generated `CMakePresets.json`), the check that each repo's `lefthook.yml` pulls the shared hooks, and the workspace tag (`ref`) that every repo uses the shared CI and hooks at. `tools/sync --check` reports drift, nightly too |
 | `lefthook/common.yml` | The shared git hooks: clang-format, qmlformat, the Conventional Commits check |
 | `claude/conventions.md` | The rules every repo's CLAUDE.md imports |
 | `.claude-plugin/marketplace.json`, `plugins/` | The Claude Code plugins: `phosphor-works` (shared) and one per app |
 | `plugins/phosphor-works/lessons/` | The lessons, one file each, that the lesson index searches |
-| `.github/workflows/` | `cpp-ci.yml` (the CI every C++ repo calls), `flake-update.yml` (weekly `flake.lock` pull requests in every repo with a flake), `superbuild.yml` (nightly, pull requests that change a build input, change sets by hand) and `plugins.yml` |
+| `.github/workflows/` | `cpp-ci.yml` (the CI every C++ repo calls), `flake-update.yml` (weekly `flake.lock` pull requests in every repo with a flake), `superbuild.yml` (nightly, pull requests that change a build input with the change set of their branch, change sets by hand) and `plugins.yml` |
 
 ## The superbuild
 

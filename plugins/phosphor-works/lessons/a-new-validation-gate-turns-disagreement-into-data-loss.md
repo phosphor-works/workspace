@@ -5,7 +5,7 @@ repos: [all]
 domains: [config, design]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Before you add a schema check or gate, check every producer against it. One gate rejected saves that clients still

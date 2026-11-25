@@ -73,6 +73,26 @@ Turn an app off with `-DWORKSPACE_BUILD_<App>=OFF` (`PlasmaZones`, `Lambent`, `A
 A build here uses every repo's current checkout, while each app's own CI builds the commits it pins. A failure
 here that an app's CI does not show usually means that app's pin is behind a library's `main`.
 
+## Change sets
+
+A change that spans repos is a change set: one branch name in each repo it touches. `tools/change` makes the
+branches, opens the pull requests and links them:
+
+```sh
+tools/change start feat/new-api phosphor-libs PlasmaZones   # the branch, from origin/main, in each repo
+tools/change status                                         # commits, pull request and checks of each repo
+tools/change push                                           # push, open the missing pull requests, link them all
+tools/change build                                          # the superbuild on the set, in GitHub Actions
+```
+
+`status`, `push` and `build` take the set's name, or use the branch of the current directory. Every pull request of
+the set gets a "Change set" section that lists the others, and `push` updates it when a repo joins. The list is in
+merge order, libraries first. After a library merges, move each app's pin to the merged commit before the app
+merges.
+
+A pull request on `workspace` runs the superbuild with every repo that has the same branch, so a set that includes
+`workspace` builds there on its own. `tools/change build` is for a set with no `workspace` branch.
+
 ## Shared files and hooks
 
 Every repo holds the same `.clang-format` and `.editorconfig`, and every C++ repo the same `CMakePresets.json`:
@@ -88,6 +108,18 @@ tools/sync --check    # report what differs (the nightly runs it too)
 The git hooks every repo shares are in `lefthook/common.yml`: clang-format and qmlformat on the staged files, and the
 Conventional Commits check. Each repo's `lefthook.yml` pulls them through `remotes:` and adds only its own commands.
 `tools/setup` runs `lefthook install` in every repo.
+
+Every repo uses the shared CI (`.github/workflows/cpp-ci.yml`) and the shared hooks at one tag of this repo: `ref`
+in `sync/repos.json`. `tools/sync` writes it into each repo's `ci.yml` and `lefthook.yml`, and `--check` reports a
+repo at another ref. A change to `cpp-ci.yml` or `lefthook/common.yml` reaches the repos in four steps:
+
+1. Merge the change here.
+2. Push the next tag on `main` (`v2` after `v1`). A tag never moves.
+3. Set `ref` to the new tag and run `tools/sync`.
+4. Land the result as one change set (`tools/change`), with the `workspace` change to `ref` in it.
+
+To try a change to `cpp-ci.yml` before it has a tag, point one repo's `ci.yml` at the `workspace` branch on a
+branch of that repo, and do not merge that.
 
 ## Claude Code
 

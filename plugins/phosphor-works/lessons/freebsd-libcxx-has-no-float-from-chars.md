@@ -5,7 +5,7 @@ repos: [phosphor-bots]
 domains: [cpp-qt, freebsd]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 `std::from_chars` for `float` and `double` does not exist in the libc++ 19 of FreeBSD 15, so code that builds on

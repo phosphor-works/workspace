@@ -5,7 +5,7 @@ repos: [all]
 domains: [animation, perf]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 An effect that animates only while visible must still stop scheduling frames when it has nothing to move.

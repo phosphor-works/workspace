@@ -5,7 +5,7 @@ repos: [all]
 domains: [build, verification]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 The first workspace superbuild configured cleanly with the expected 784 tests, but the build then failed twice: a

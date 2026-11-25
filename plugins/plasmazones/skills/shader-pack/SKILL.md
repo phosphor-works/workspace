@@ -4,7 +4,7 @@ description: "Write, change or preview ONE PlasmaZones shader pack (window anima
 ---
 
 <!--
-SPDX-FileCopyrightText: 2026 fuddlesworth
+SPDX-FileCopyrightText: 2026 Phosphor Works Team
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
@@ -43,7 +43,7 @@ uniform name from memory. Schemas: `../phosphor-libs/data/schemas/<family>-metad
 ## Licence
 
 - `metadata.json` and curve JSON carry NO header. Each `.frag`/`.vert`/`.glsl` opens with
-  `// SPDX-FileCopyrightText: 2026 fuddlesworth` and `// SPDX-License-Identifier: …`. Keep an existing file's licence.
+  `// SPDX-FileCopyrightText: 2026 Phosphor Works Team` and `// SPDX-License-Identifier: …`. Keep an existing file's licence.
 - New PlasmaZones-original shader: `LGPL-2.1-or-later` for animation and pointer; `GPL-3.0-or-later` for overlay. Surface
   packs follow phosphor-surface-packs' own rules (its README and `scripts/check.py`).
 - A port of GPL upstream, or anything including `animations/shared/bmw_compat.glsl`, is `GPL-3.0-or-later` with a second

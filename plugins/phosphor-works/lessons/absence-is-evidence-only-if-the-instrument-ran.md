@@ -5,7 +5,7 @@ repos: [all]
 domains: [build, test, verification]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 A zero grep count, a build with no errors and a suite with no failures look the same when the target, binary or

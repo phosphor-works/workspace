@@ -5,7 +5,7 @@ repos: [all]
 domains: [test, qml]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 phosphor-shell-libs' tray test failed now and then on CI and on one CPU locally, and a longer tryVerify timeout did

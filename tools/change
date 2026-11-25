@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Work on a change set: one branch name in each repository that a change touches.
+
+  tools/change start NAME REPO...    make branch NAME from an up-to-date origin/main in each REPO
+  tools/change status [NAME]         each repository of the set: commits, pull request, checks
+  tools/change push [NAME]           push each repository that has commits, open the pull requests
+                                     that are missing, and link every pull request of the set
+  tools/change build [NAME]          run the workspace superbuild on the set (GitHub Actions)
+
+NAME defaults to the branch of the current directory's checkout. A repository is in
+the set when it has branch NAME, here or on origin. The set is listed in the order of
+workspace.repos, libraries first, which is the order to merge it in. After a library
+merges, move each app's pin to the merged commit before the app's pull request merges.
+
+push opens a pull request with the commit messages as its text (gh pr create --fill),
+or with --title and --body-file. It then writes a "Change set" section into the text of
+every pull request of the set, which lists all of them. Run push again after a
+repository joins the set, and every pull request lists it.
+
+A pull request on workspace builds the superbuild with every repository that has the
+same branch, so a change set that includes workspace builds there on its own. Use
+build for a set without a workspace branch.
+
+Needs git and an authenticated gh.
+"""
+
+import argparse
+import json
+from concurrent.futures import ThreadPoolExecutor
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent.parent
+ROOT = HERE.parent
+BEGIN, END = '<!-- change-set -->', '<!-- /change-set -->'
+
+
+def repos():
+    """Every repository of workspace.repos, in its order, then workspace."""
+    names = [line.split(':')[0].strip() for line in (HERE / 'workspace.repos').read_text().splitlines()
+             if line.startswith('  ') and not line.startswith('   ') and line.strip().endswith(':')]
+    return names + ['workspace']
+
+
+def repo_dir(name):
+    return HERE if name == 'workspace' else ROOT / name
+
+
+def run(cmd, cwd=None, check=True):
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
+    if check and result.returncode != 0:
+        sys.exit(f'{" ".join(cmd)} (in {cwd or "."}) failed:\n{result.stderr.strip()}')
+    return result
+
+
+def git(repo, *args, check=True):
+    return run(['git', *args], cwd=repo_dir(repo), check=check)
+
+
+def slug(repo):
+    """owner/name on GitHub, from the origin URL."""
+    url = git(repo, 'remote', 'get-url', 'origin').stdout.strip()
+    match = re.search(r'github\.com[:/](.+?)(?:\.git)?$', url)
+    if not match:
+        sys.exit(f'{repo}: origin is not on GitHub: {url}')
+    return match.group(1)
+
+
+def cloned():
+    return [r for r in repos() if (repo_dir(r) / '.git').exists()]
+
+
+def has_branch(repo, name):
+    local = git(repo, 'rev-parse', '--verify', '--quiet', f'refs/heads/{name}', check=False).returncode == 0
+    remote = git(repo, 'ls-remote', '--exit-code', '--heads', 'origin', name, check=False).returncode == 0
+    return local, remote
+
+
+def members(name):
+    """[(repo, has a local branch, has a remote branch)] for every repository of the set."""
+    names = cloned()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        found = list(pool.map(lambda repo: has_branch(repo, name), names))
+    out = [(repo, local, remote) for repo, (local, remote) in zip(names, found) if local or remote]
+    if not out:
+        sys.exit(f'No repository has branch {name}.')
+    return out
+
+
+def default_name():
+    result = run(['git', 'branch', '--show-current'], check=False)
+    name = result.stdout.strip()
+    if result.returncode != 0 or not name or name == 'main':
+        sys.exit('Give the change set NAME: the current directory is not on a change-set branch.')
+    return name
+
+
+def pull_request(repo, name):
+    """The open or merged pull request of branch NAME, as gh pr view JSON, or None."""
+    fields = 'number,url,state,title,body,mergeable,statusCheckRollup'
+    cmd = ['gh', 'pr', 'list', '--repo', slug(repo), '--head', name, '--state', 'all', '--json', fields, '--limit', '1']
+    # GitHub's GraphQL API sometimes fails a query once ("Something went wrong").
+    for attempt in range(3):
+        result = run(cmd, check=False)
+        if result.returncode == 0:
+            break
+        time.sleep(2 * (attempt + 1))
+    if result.returncode != 0:
+        sys.exit(f'{repo}: gh pr list failed:\n{result.stderr.strip()}')
+    found = json.loads(result.stdout)
+    return found[0] if found else None
+
+
+def checks(pr):
+    """A short summary of the check runs of PR."""
+    counts = {}
+    for check in pr.get('statusCheckRollup') or []:
+        state = (check.get('conclusion') or check.get('state') or check.get('status') or '').upper()
+        bucket = {'SUCCESS': 'passed', 'SKIPPED': 'skipped', 'NEUTRAL': 'passed', '': 'pending',
+                  'QUEUED': 'pending', 'IN_PROGRESS': 'pending', 'PENDING': 'pending', 'EXPECTED': 'pending',
+                  'WAITING': 'pending'}.get(state, 'failed')
+        counts[bucket] = counts.get(bucket, 0) + 1
+    if not counts:
+        return 'no checks'
+    return ', '.join(f'{counts[k]} {k}' for k in ('failed', 'pending', 'passed', 'skipped') if k in counts)
+
+
+def ahead(repo, name, local):
+    """Commits on NAME that origin/main does not have, or None when there is no local branch."""
+    if not local:
+        return None
+    return int(git(repo, 'rev-list', '--count', f'origin/main..{name}').stdout.strip())
+
+
+def unpushed(repo, name, local, remote):
+    if not local:
+        return 0
+    if not remote:
+        return ahead(repo, name, local)
+    git(repo, 'fetch', '--quiet', 'origin', name)
+    return int(git(repo, 'rev-list', '--count', f'origin/{name}..{name}').stdout.strip())
+
+
+def cmd_start(args):
+    unknown = set(args.repos) - set(repos())
+    if unknown:
+        sys.exit(f'Not in workspace.repos: {", ".join(sorted(unknown))}')
+    for repo in args.repos:
+        if not (repo_dir(repo) / '.git').exists():
+            sys.exit(f'{repo}: not cloned. Run tools/setup.')
+    for repo in args.repos:
+        local, _ = has_branch(repo, args.name)
+        if local:
+            print(f'{repo}: already has {args.name}')
+            continue
+        if git(repo, 'status', '--porcelain', '--untracked-files=no').stdout.strip():
+            sys.exit(f'{repo}: has uncommitted changes. Commit or stash them first.')
+        git(repo, 'fetch', '--quiet', 'origin', 'main')
+        git(repo, 'switch', '--quiet', '-c', args.name, 'origin/main')
+        print(f'{repo}: on {args.name}, from origin/main')
+    return 0
+
+
+def cmd_status(args):
+    name = args.name or default_name()
+    found = members(name)
+    print(f'Change set {name}, in merge order:')
+    for repo, local, remote in found:
+        parts = []
+        count = ahead(repo, name, local)
+        if count is not None:
+            parts.append(f'{count} commit(s)')
+        waiting = unpushed(repo, name, local, remote)
+        if waiting:
+            parts.append(f'{waiting} not pushed')
+        if not local:
+            parts.append('only on origin')
+        pr = pull_request(repo, name) if remote else None
+        if pr:
+            parts.append(f'#{pr["number"]} {pr["state"].lower()}')
+            if pr['state'] == 'OPEN':
+                parts.append(checks(pr))
+                if pr.get('mergeable') == 'CONFLICTING':
+                    parts.append('conflicts with main')
+        elif remote:
+            parts.append('no pull request')
+        print(f'  {repo}: {"; ".join(parts)}')
+    return 0
+
+
+def set_section(name, prs):
+    lines = [BEGIN, '## Change set', '',
+             f'This pull request is part of the change set `{name}`. Merge them in this order, and move each app\'s '
+             'pin to a library\'s merged commit before the app merges:', '']
+    lines += [f'- {repo_slug}#{pr["number"]}' for repo_slug, pr in prs]
+    lines.append(END)
+    return '\n'.join(lines)
+
+
+def with_section(body, section):
+    body = body or ''
+    if BEGIN in body and END in body:
+        start, stop = body.index(BEGIN), body.index(END) + len(END)
+        return body[:start] + section + body[stop:]
+    return body.rstrip() + '\n\n' + section + '\n'
+
+
+def cmd_push(args):
+    name = args.name or default_name()
+    if args.body_file and not args.title:
+        sys.exit('--body-file needs --title.')
+    for repo, local, remote in members(name):
+        if not local:
+            continue
+        if not remote and not ahead(repo, name, local):
+            print(f'{repo}: no commits on {name}, not pushed')
+            continue
+        if unpushed(repo, name, local, remote):
+            git(repo, 'push', '--quiet', '-u', 'origin', name)
+            print(f'{repo}: pushed')
+        if pull_request(repo, name) is None:
+            cmd = ['gh', 'pr', 'create', '--repo', slug(repo), '--head', name, '--base', 'main']
+            cmd += ['--title', args.title, '--body-file', args.body_file] if args.title and args.body_file else \
+                ['--title', args.title, '--fill'] if args.title else ['--fill']
+            url = run(cmd, cwd=repo_dir(repo)).stdout.strip().splitlines()[-1]
+            print(f'{repo}: opened {url}')
+
+    prs = [(slug(repo), pr) for repo, _, remote in members(name) if remote
+           for pr in [pull_request(repo, name)] if pr]
+    if len(prs) < 2:
+        return 0
+    section = set_section(name, prs)
+    for repo_slug, pr in prs:
+        if pr['state'] != 'OPEN':
+            continue
+        body = with_section(pr['body'], section)
+        if body != pr['body']:
+            run(['gh', 'pr', 'edit', str(pr['number']), '--repo', repo_slug, '--body', body])
+            print(f'{repo_slug}#{pr["number"]}: change set section updated')
+    return 0
+
+
+def cmd_build(args):
+    name = args.name or default_name()
+    members(name)
+    run(['gh', 'workflow', 'run', 'superbuild.yml', '--repo', slug('workspace'), '--ref', 'main',
+         '-f', f'change_set={name}'])
+    print(f'Superbuild started for {name}. Follow it with: gh run list --repo {slug("workspace")} '
+          '--workflow superbuild.yml')
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0],
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     epilog=__doc__.split('\n\n', 1)[1])
+    sub = parser.add_subparsers(dest='command', required=True)
+    start = sub.add_parser('start', help='make the branch in each repository')
+    start.add_argument('name')
+    start.add_argument('repos', nargs='+', metavar='REPO')
+    start.set_defaults(func=cmd_start)
+    status = sub.add_parser('status', help='show each repository of the set')
+    status.add_argument('name', nargs='?')
+    status.set_defaults(func=cmd_status)
+    push = sub.add_parser('push', help='push, open the pull requests and link them')
+    push.add_argument('name', nargs='?')
+    push.add_argument('--title', help='title of each new pull request')
+    push.add_argument('--body-file', help='text of each new pull request (needs --title)')
+    push.set_defaults(func=cmd_push)
+    build = sub.add_parser('build', help='run the superbuild on the set')
+    build.add_argument('name', nargs='?')
+    build.set_defaults(func=cmd_build)
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

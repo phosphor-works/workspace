@@ -5,7 +5,7 @@ repos: [all]
 domains: [qml, crash]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Afterglow's native suite segfaulted in 3 of 8 runs, in Qt, while a window built its chrome. A component from

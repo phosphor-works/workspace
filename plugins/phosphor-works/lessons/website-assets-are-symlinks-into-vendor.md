@@ -5,7 +5,7 @@ repos: [website]
 domains: [build]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 `public/brand/assets` and `public/palette/phosphor.toml` point into `vendor/`, which `npm run fetch:branding` fills

@@ -4,7 +4,7 @@ description: "Record what work in a phosphor-works repo taught, in the place the
 ---
 
 <!--
-SPDX-FileCopyrightText: 2026 fuddlesworth
+SPDX-FileCopyrightText: 2026 Phosphor Works Team
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
@@ -48,7 +48,7 @@ repos: [all]
 domains: [cpp-qt]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 The default is an ordinary argument, so if `f` inserts into the same container, the lookup returns what `f` just

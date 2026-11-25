@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Keep the files every phosphor-works repository shares the same everywhere.
 
@@ -18,6 +18,10 @@ sync/repos.json says what goes where:
   (lefthook/common.yml) through `remotes:`. A repository without one gets a
   lefthook.yml that only does that. One with commands of its own is checked,
   not rewritten.
+- "ref": the tag of this repository that every repository uses the shared
+  CI workflows (`phosphor-works/workspace/.github/workflows/<name>.yml@<ref>`)
+  and the shared hooks (the `ref:` of the lefthook remote) at. tools/sync
+  writes it into each workflow and lefthook.yml.
 
 Change a shared file here, run tools/sync, and commit the result in each
 repository. A repository never edits these files itself.
@@ -25,6 +29,7 @@ repository. A repository never edits these files itself.
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -34,7 +39,10 @@ MANIFEST = json.loads((HERE / 'sync/repos.json').read_text())
 
 REMOTE_URL = 'https://github.com/phosphor-works/workspace'
 REMOTE_CONFIG = 'lefthook/common.yml'
-LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 fuddlesworth
+REF = MANIFEST['ref']
+WORKFLOW_USE = re.compile(r'(phosphor-works/workspace/\.github/workflows/[\w.-]+\.ya?ml)@([\w./-]+)')
+REMOTE_REF = re.compile(r'(git_url: ' + re.escape(REMOTE_URL) + r'\n\s+ref: )(\S+)')
+LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 Phosphor Works Team
 # SPDX-License-Identifier: CC0-1.0
 #
 # Git hooks (https://github.com/evilmartians/lefthook). The shared ones (clang-format,
@@ -42,7 +50,7 @@ LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 fuddlesworth
 # `lefthook install` sets them up, and workspace/tools/setup runs it.
 remotes:
   - git_url: {REMOTE_URL}
-    ref: main
+    ref: {REF}
     configs:
       - {REMOTE_CONFIG}
 """
@@ -107,6 +115,20 @@ def expected_files(repo):
     return out
 
 
+def pin_refs(root):
+    """{relative path: content with every shared-workflow and hook ref set to REF} for the files that differ."""
+    out = {}
+    paths = sorted((root / '.github/workflows').glob('*.y*ml')) + [root / 'lefthook.yml']
+    for path in paths:
+        if not path.is_file():
+            continue
+        text = path.read_text()
+        pinned = REMOTE_REF.sub(lambda m: m.group(1) + REF, WORKFLOW_USE.sub(lambda m: f'{m.group(1)}@{REF}', text))
+        if pinned != text:
+            out[str(path.relative_to(root))] = pinned
+    return out
+
+
 def lefthook_problem(path):
     """Why PATH does not pull the shared hooks, or None."""
     if not path.exists():
@@ -150,6 +172,12 @@ def main():
                 written.append(f'{repo}/lefthook.yml')
             elif problem:
                 problems.append(f'{repo}/lefthook.yml: {problem}')
+        for rel, content in pin_refs(root).items():
+            if args.check:
+                problems.append(f'{repo}/{rel}: uses the shared workflows or hooks at a ref other than {REF}')
+            else:
+                (root / rel).write_text(content)
+                written.append(f'{repo}/{rel}')
 
     for w in written:
         print(f'wrote {w}')

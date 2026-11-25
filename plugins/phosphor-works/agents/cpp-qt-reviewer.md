@@ -4,7 +4,7 @@ description: "phosphor-works C++20/Qt 6 core reviewer, for any repo of the suite
 ---
 
 <!--
-SPDX-FileCopyrightText: 2026 fuddlesworth
+SPDX-FileCopyrightText: 2026 Phosphor Works Team
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
