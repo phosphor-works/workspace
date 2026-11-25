@@ -5,7 +5,7 @@ repos: [phosphor-bots]
 domains: [ci, build]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 No workflow builds phosphor-bots. A build with GCC alone hides Clang warnings, and the FreeBSD target is checked

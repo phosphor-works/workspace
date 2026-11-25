@@ -4,7 +4,7 @@ description: "Build, test, licensing, packaging, data and documentation reviewer
 ---
 
 <!--
-SPDX-FileCopyrightText: 2026 fuddlesworth
+SPDX-FileCopyrightText: 2026 Phosphor Works Team
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
@@ -60,7 +60,7 @@ The orchestrator applies your fixes without re-deriving them. A confident causal
 - **Fuzzers**: a selector must reach every branch (an `op % N` that skips a mode is a finding).
 
 ## Licensing expertise to apply
-- Every file that can hold a comment starts with `SPDX-FileCopyrightText: 2026 fuddlesworth` and an `SPDX-License-Identifier`, CMakeLists.txt and test files included.
+- Every file that can hold a comment starts with `SPDX-FileCopyrightText: 2026 Phosphor Works Team` and an `SPDX-License-Identifier`, CMakeLists.txt and test files included.
 - Apps, their tests and their tools are GPL-3.0-or-later. Libraries, including their own `tests/`, are LGPL-2.1-or-later, so a GPL header inside a phosphor library's tests is a finding. A tool follows what it links.
 - Shader packs and helpers have their own split per home (LGPL for reusable helpers, GPL where upstream copyleft is incorporated). The app notes list the homes and the exceptions. The license follows the incorporated content, so check the sibling files' existing headers before you flag one.
 - A file that cannot carry a header (JSON, images, `.desktop`, presets, theme files, compressed results) needs a `REUSE.toml` annotation where the repo has one. A new asset without one is a finding.

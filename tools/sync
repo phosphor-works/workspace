@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Keep the files every phosphor-works repository shares the same everywhere.
 
@@ -42,7 +42,7 @@ REMOTE_CONFIG = 'lefthook/common.yml'
 REF = MANIFEST['ref']
 WORKFLOW_USE = re.compile(r'(phosphor-works/workspace/\.github/workflows/[\w.-]+\.ya?ml)@([\w./-]+)')
 REMOTE_REF = re.compile(r'(git_url: ' + re.escape(REMOTE_URL) + r'\n\s+ref: )(\S+)')
-LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 fuddlesworth
+LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 Phosphor Works Team
 # SPDX-License-Identifier: CC0-1.0
 #
 # Git hooks (https://github.com/evilmartians/lefthook). The shared ones (clang-format,

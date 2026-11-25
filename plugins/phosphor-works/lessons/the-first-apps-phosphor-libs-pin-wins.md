@@ -5,7 +5,7 @@ repos: [phosphor-engine-libs, phosphor-shell-libs, phosphor-components, PlasmaZo
 domains: [build, cmake]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 When an app adds phosphor-engine-libs, phosphor-shell-libs or phosphor-components, the app's own phosphor-libs pin

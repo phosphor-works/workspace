@@ -5,7 +5,7 @@ repos: [all]
 domains: [test, design]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 Afterglow's `newTab` did not start the tab transition, because the code read `m_splits` before the tab had one.

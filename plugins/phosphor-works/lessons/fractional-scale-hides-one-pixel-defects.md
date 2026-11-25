@@ -5,7 +5,7 @@ repos: [all]
 domains: [cpp-qt, wayland, geometry]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 `QRectF::toRect()` and `qRound(logical * scale)` move an edge by a pixel at 1.15 or 1.25. That broke exact rect

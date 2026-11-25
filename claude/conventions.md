@@ -1,4 +1,4 @@
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 # phosphor-works conventions
@@ -101,8 +101,10 @@ repository.
 
 ## Licenses
 
-- Every file that can hold a comment starts with `SPDX-FileCopyrightText: 2026 fuddlesworth` and an
-  `SPDX-License-Identifier`.
+- Every file that can hold a comment starts with `SPDX-FileCopyrightText: 2026 Phosphor Works Team` and an
+  `SPDX-License-Identifier`. Phosphor Works Team is the only holder of the project's own work. A file ported from
+  another project also keeps the upstream holder's line, and a contributor's line stays unless the contributor
+  agrees to remove it.
 - Apps, their tests and their tools are `GPL-3.0-or-later`. Libraries, including their own tests, are
   `LGPL-2.1-or-later`.
 - A format with no comment syntax (JSON) has no header. `REUSE.toml` licenses such files where a repository has one.

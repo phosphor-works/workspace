@@ -5,7 +5,7 @@ repos: [phosphor-surface-packs, PlasmaZones]
 domains: [shader, test]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 `scripts/check.py` checks ids, files, includes and SPDX only. GLSL compilation (`plasmazones-shader-validate

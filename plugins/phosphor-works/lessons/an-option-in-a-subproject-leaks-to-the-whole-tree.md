@@ -5,7 +5,7 @@ repos: [all]
 domains: [build, cmake]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 `option(CMAKE_UNITY_BUILD ... ON)` in PlasmaZones put the setting in the cache, so in the workspace superbuild

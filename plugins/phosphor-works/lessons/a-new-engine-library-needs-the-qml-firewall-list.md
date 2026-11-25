@@ -5,7 +5,7 @@ repos: [phosphor-engine-libs]
 domains: [build, cmake]
 added: 2026-11-24
 ---
-<!-- SPDX-FileCopyrightText: 2026 fuddlesworth -->
+<!-- SPDX-FileCopyrightText: 2026 Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 The engine QML check in phosphor-engine-libs' root CMakeLists checks only the targets in `PHOSPHOR_ENGINE_TARGETS`.
