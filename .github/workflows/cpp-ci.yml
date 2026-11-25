@@ -167,6 +167,10 @@ jobs:
           # configure under Clang.
           pacman -S --noconfirm --needed clang openmp
           { echo "CC=clang"; echo "CXX=clang++"; } >> "$GITHUB_ENV"
+          # No unity build: Clang reports an unused variable or function only in
+          # the main file of a compile, and a unity build makes every source an
+          # included file. The GCC job keeps the unity build.
+          echo "CONFIGURE_ARGS=-DCMAKE_UNITY_BUILD=OFF" >> "$GITHUB_ENV"
           clang++ --version
 
       - name: Show the Qt version
@@ -202,7 +206,8 @@ jobs:
             ccache-${{ matrix.distro }}-${{ inputs.preset }}-main-
 
       - name: Configure
-        run: cmake --preset "$PRESET"
+        # CONFIGURE_ARGS is empty but in the Clang job.
+        run: cmake --preset "$PRESET" ${CONFIGURE_ARGS:-}
 
       # ccache replays the warnings of a cached compile, so a warning fails
       # every build until it is fixed, not only the first. -k 0 reports every
