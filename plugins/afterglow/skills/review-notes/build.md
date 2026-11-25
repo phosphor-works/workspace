@@ -59,7 +59,7 @@ What a test asserts about its subject goes to that subject's owner. The CMakeLis
 | `AFTERGLOW_BUILD_MUX` | Shown only with `AFTERGLOW_AGLOW_ONLY`, on by default. aglow-mux needs PCRE2 and the Phosphor checkout. Without the checkout the configuration stops with a `FATAL_ERROR` that names `AFTERGLOW_BUILD_MUX` off as the way out. |
 
 - docs/BUILD.md's required packages must match every `find_package`/`pkg_check_modules`, including private Qt modules.
-- **Install**: data installs by directory (`shaders`, `themes`, `shell-integration`, `api/afterglow.d.luau`). The root `examples/` directory does not install. The app id `${AFTERGLOW_APP_ID}` (`com.phosphorworks.Afterglow`) names the .desktop file, the metainfo, the icon and the desktop entry the code sends.
+- **Install**: data installs by directory (`shaders`, `themes`, `shell-integration`, `api/afterglow.d.luau`). The root `examples/` directory does not install. The app id `${AFTERGLOW_APP_ID}` (`org.phosphor_works.Afterglow`) names the .desktop file, the metainfo, the icon and the desktop entry the code sends.
 
 ## Tests and tools
 
