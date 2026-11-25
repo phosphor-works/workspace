@@ -124,6 +124,11 @@ and tooling come from, and the import of `claude/conventions.md`. `tools/sync` w
 markers. The rest of the file is the repo's own, under the standard sections in their order (`SECTIONS` in
 `tools/sync`), and `--check` reports a missing, unknown or misplaced one.
 
+`tools/sync --check` also compares the pins. A repo that pins a library, which pins a third repo too, must pin the
+same commit of that third repo: the first pin wins in the build, and the library was tested with its own. The check
+reads the library's pins at the pinned commit from its sibling checkout. It reports a difference, and the fix is a
+pin bump in the repo.
+
 The git hooks every repo shares are in `lefthook/common.yml`: clang-format and qmlformat on the staged files, and the
 Conventional Commits check. Each repo's `lefthook.yml` pulls them through `remotes:` and adds only its own commands.
 `tools/setup` runs `lefthook install` in every repo.

@@ -23,6 +23,11 @@ sync/repos.json says what goes where:
   lines) and then has only the standard sections, in their order (SECTIONS).
   tools/sync writes the block. The sections are each repository's own, and
   --check reports a missing, unknown or misplaced one.
+- Pins: a repository that pins a library (an archive of a phosphor-works
+  repository at a commit, in cmake/*Dependencies.cmake) that pins a third
+  repository too must pin the same commit of that one: the first pin wins in
+  the build, and the library was tested with its own. --check reads the
+  library's pins at the pinned commit from its sibling checkout.
 - "ref": the tag of this repository that every repository uses the shared
   CI workflows (`phosphor-works/workspace/.github/workflows/<name>.yml@<ref>`)
   and the shared hooks (the `ref:` of the lefthook remote) at. tools/sync
@@ -35,6 +40,7 @@ repository. A repository never edits these files itself.
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -182,6 +188,42 @@ def claude_md(repo, root):
     return (want if want != text else None), problems
 
 
+PIN = re.compile(r'^set\(\w+_DEP_([\w.-]+)_VERSION "([0-9a-f]{40})"\)', re.M)
+
+
+def pins_of(text):
+    """{repository: commit} of the commit pins in a *Dependencies.cmake text."""
+    return dict(PIN.findall(text))
+
+
+def pin_problems(repo, root):
+    """Each pin of @p repo that differs from the pin of the same repository in a library it pins."""
+    files = sorted((root / 'cmake').glob('*Dependencies.cmake'))
+    if not files:
+        return []
+    own = pins_of(files[0].read_text())
+    problems = []
+    for lib, commit in own.items():
+        lib_root = repo_dir(lib) if lib in all_repos() else None
+        if lib_root is None or not (lib_root / '.git').exists():
+            continue
+        listed = subprocess.run(['git', '-C', str(lib_root), 'ls-tree', '--name-only', commit, 'cmake/'],
+                                capture_output=True, text=True)
+        names = [n for n in listed.stdout.split() if n.endswith('Dependencies.cmake')]
+        if listed.returncode != 0:
+            problems.append(f'pins {lib} at {commit[:8]}, which its checkout does not have: fetch it')
+            continue
+        if not names:
+            continue
+        shown = subprocess.run(['git', '-C', str(lib_root), 'show', f'{commit}:{names[0]}'], capture_output=True,
+                               text=True)
+        for dep, theirs in pins_of(shown.stdout).items():
+            mine = own.get(dep)
+            if mine and mine != theirs:
+                problems.append(f'pins {dep} at {mine[:8]}, but the {lib} it pins ({commit[:8]}) pins {theirs[:8]}')
+    return problems
+
+
 def lefthook_problem(path):
     """Why PATH does not pull the shared hooks, or None."""
     if not path.exists():
@@ -234,6 +276,7 @@ def main():
                 else:
                     (root / 'CLAUDE.md').write_text(want)
                     written.append(f'{repo}/CLAUDE.md')
+        problems += [f'{repo}/cmake: {p}' for p in pin_problems(repo, root)]
         for rel, content in pin_refs(root).items():
             if args.check:
                 problems.append(f'{repo}/{rel}: uses the shared workflows or hooks at a ref other than {REF}')
