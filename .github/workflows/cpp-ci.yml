@@ -1,0 +1,265 @@
+# SPDX-FileCopyrightText: 2026 fuddlesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The CI of every phosphor-works C++ repository. A repository's own
+# .github/workflows/ci.yml calls it and passes what differs:
+#
+#   jobs:
+#     ci:
+#       uses: phosphor-works/workspace/.github/workflows/cpp-ci.yml@main
+#       with:
+#         pin-file: cmake/LambentDependencies.cmake
+#         nix-verify: test -x result/bin/lambent
+#
+# The jobs:
+#
+#   * Arch, and Fedora where `fedora` is true: configure, build and test from
+#     one shared preset, with a compiler cache. A compiler warning fails the
+#     build. The install is staged in a temporary directory.
+#   * Lint: clang-format and qmlformat over every tracked C++ and QML file.
+#   * Nix, where the repository has a flake: `nix flake check` (the package
+#     with its tests in the sandbox), the package, `nix-verify` on the
+#     package, and the dev shell, on x86_64 and aarch64.
+#
+# The repository holds the package lists: .github/ci/arch-packages.txt and,
+# for Fedora, .github/ci/fedora-packages.txt. One package on each line, and
+# `#` starts a comment.
+
+name: C++ CI
+
+on:
+  workflow_call:
+    inputs:
+      pin-file:
+        description: The file that pins what CPM downloads. The archive cache is keyed on it.
+        type: string
+        required: true
+      preset:
+        description: The configure, build and test preset.
+        type: string
+        default: dev
+      fedora:
+        description: Also build and test on Fedora, from .github/ci/fedora-packages.txt.
+        type: boolean
+        default: false
+      fedora-version:
+        type: string
+        default: "44"
+      build-timeout:
+        description: Minutes for the Arch and Fedora jobs.
+        type: number
+        default: 60
+      nix-timeout:
+        description: Minutes for each Nix job.
+        type: number
+        default: 90
+      nix:
+        description: Run the Nix jobs. False for a repository with no flake.nix.
+        type: boolean
+        default: true
+      nix-verify:
+        description: Bash that checks the package in ./result. It runs with `set -euo pipefail`.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # A matrix include that matches no listed distro would add a job, so each
+    # distro's values come from its name instead.
+    name: ${{ matrix.distro == 'arch' && 'Arch' || format('Fedora {0}', inputs.fedora-version) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.build-timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: ${{ fromJSON(inputs.fedora && '["arch", "fedora"]' || '["arch"]') }}
+    container:
+      image: ${{ matrix.distro == 'arch' && 'archlinux:latest' || format('fedora:{0}', inputs.fedora-version) }}
+    env:
+      PRESET: ${{ inputs.preset }}
+      INSTALL: ${{ matrix.distro == 'arch' && 'pacman -S --noconfirm --needed' || 'dnf install -y' }}
+      PACKAGES: .github/ci/${{ matrix.distro }}-packages.txt
+    steps:
+      # The images have no git, and actions/checkout needs it for a real clone.
+      - name: Bootstrap git
+        run: ${{ matrix.distro == 'arch' && 'pacman -Syu --noconfirm --needed git' || 'dnf install -y git' }}
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' "$PACKAGES")
+          for try in 1 2 3; do
+            $INSTALL "${packages[@]}" && exit 0
+            [ "$try" = 3 ] && exit 1
+            sleep 10
+          done
+
+      - name: Show the Qt version
+        run: qtpaths6 --qt-version || /usr/lib/qt6/bin/qtpaths --qt-version || true
+
+      - name: Restore the dependency archives
+        uses: actions/cache@v5
+        with:
+          path: .cache/cpm
+          key: cpm-${{ hashFiles(inputs.pin-file) }}
+
+      # Saved on every run under a new key, restored from the newest one, so a
+      # pull request starts from main's cache and only recompiles what it
+      # changed. Each project turns ccache on when it finds it.
+      - name: Set up the compiler cache
+        run: |
+          {
+            echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache"
+            echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+            echo "CCACHE_NOHASHDIR=true"
+            echo "CCACHE_COMPILERCHECK=content"
+            echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime"
+            echo "CCACHE_MAXSIZE=2G"
+          } >> "$GITHUB_ENV"
+
+      - name: Restore the compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.distro }}-${{ inputs.preset }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.distro }}-${{ inputs.preset }}-${{ github.ref_name }}-
+            ccache-${{ matrix.distro }}-${{ inputs.preset }}-main-
+
+      - name: Configure
+        run: cmake --preset "$PRESET"
+
+      # ccache replays the warnings of a cached compile, so a warning fails
+      # every build until it is fixed, not only the first. -k 0 reports every
+      # failing file, not only the first. Only compiler and linker warnings
+      # count: a tool that the build runs (a fixture checker, say) can print
+      # "warning:" about its input on purpose.
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build --preset "$PRESET" -- -k 0 2>&1 | tee "$RUNNER_TEMP/build.log"
+          pattern=':[0-9]+:[0-9]+: warning:|^(cc1|cc1plus|gcc|g\+\+|clang|clang\+\+|collect2|lto-wrapper|ld|ld\.bfd|ld\.lld|ld\.gold|/usr/bin/ld): warning:'
+          if grep -qE "$pattern" "$RUNNER_TEMP/build.log"; then
+            echo "::error::The build has compiler warnings:"
+            grep -E -B2 -A2 "$pattern" "$RUNNER_TEMP/build.log"
+            exit 1
+          fi
+
+      - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --preset "$PRESET"
+
+      # The shared presets build into build/ for dev and build-<preset> for
+      # the others.
+      - name: Install into a staging directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=build; [ "$PRESET" = dev ] || dir="build-$PRESET"
+          DESTDIR="$RUNNER_TEMP/stage" cmake --install "$dir"
+          echo "Installed files: $(find "$RUNNER_TEMP/stage" -type f | wc -l)"
+
+      - name: Compiler cache statistics
+        if: always()
+        run: ccache --show-stats || true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Bootstrap git
+        run: pacman -Syu --noconfirm --needed git
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # clang ships clang-format and qt6-declarative ships qmlformat, from the
+      # same Arch packages contributors use, because their output changes
+      # between major versions. diffutils for the qmlformat diff.
+      - name: Install the formatters
+        run: |
+          pacman -S --noconfirm --needed clang qt6-declarative diffutils
+          clang-format --version
+
+      - name: clang-format
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          mapfile -t files < <(git ls-files '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx')
+          echo "Checking ${#files[@]} files"
+          [ "${#files[@]}" -eq 0 ] || clang-format --dry-run -Werror "${files[@]}"
+
+      - name: qmlformat
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/lib/qt6/bin:$PATH"
+          mapfile -t files < <(git ls-files '*.qml')
+          echo "Checking ${#files[@]} files"
+          unformatted=0
+          for f in "${files[@]}"; do
+            if ! qmlformat "$f" | diff -u --label "$f" --label "$f (qmlformat -i)" "$f" -; then
+              unformatted=1
+            fi
+          done
+          if [ "$unformatted" -ne 0 ]; then
+            echo "::error::The QML files above are not formatted as qmlformat -i would leave them. Run qmlformat -i on them."
+            exit 1
+          fi
+
+  nix:
+    name: Nix (${{ matrix.system }})
+    if: inputs.nix
+    timeout-minutes: ${{ inputs.nix-timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-latest
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24  # v31.11.1
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show flake outputs
+        run: nix flake show
+
+      # --fallback: build from source if a binary substitute fails, so a
+      # transient cache.nixos.org fault does not turn a good build red.
+      - name: Flake check (build and test)
+        run: nix flake check -L --fallback
+
+      - name: Build the package
+        run: nix build -L --fallback .#default
+
+      - name: Verify the package
+        shell: bash
+        env:
+          VERIFY: ${{ inputs.nix-verify }}
+        run: |
+          ls result
+          bash -euo pipefail -c "$VERIFY"
+
+      - name: Verify the dev shell
+        run: nix develop --fallback -c cmake --version
