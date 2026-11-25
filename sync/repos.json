@@ -24,6 +24,13 @@
   },
   "lefthook": "all",
   "claude": "all",
-  "documents": {},
+  "documents": {
+    "workspace": "other",
+    "branding": "other",
+    "website": "other",
+    "phosphor-surface-packs": "other",
+    "phosphor-bots": "app",
+    "PlasmaZones": "app"
+  },
   "ref": "v1"
 }
