@@ -49,6 +49,9 @@ change one of them so that they agree.
   `PHOSPHOR_SHELL_LIBS_BUILD_EXAMPLES`), so CI and the apps never build them. A test that needs an example builds it
   as its own fixture or reads it as data, so the example cannot fall behind.
 - Work on a branch. Never push to `main`. Stage files by name, never with `git add -A` or `git add .`.
+- Land work through a pull request, and merge your own pull request when every check passes. A flaky check gets a
+  root-cause fix, not a re-run. Leave pull requests that you did not open alone: the user's, other sessions' and
+  contributors'.
 
 ## Commits
 
