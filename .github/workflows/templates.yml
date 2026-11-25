@@ -39,10 +39,6 @@ jobs:
         with:
           path: workspace
 
-      # tools/new-repo copies the license texts from the sibling surface packs.
-      - name: Clone the surface packs
-        run: git clone --depth 1 https://github.com/phosphor-works/phosphor-surface-packs.git
-
       - name: Generate a library repository and an app
         run: |
           set -euo pipefail
