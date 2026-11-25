@@ -68,13 +68,21 @@ Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) in ev
 
 ## Writing
 
-Write documentation and all user-facing text in controlled English, after the principles of
+Write all text in controlled English, after the principles of
 [ASD-STE100, Issue 9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf). These rules do not claim full
 compliance with the standard's dictionary.
 
-User-facing text is every text that a user reads: UI strings, setting descriptions, pack and data metadata,
-`.desktop` files, AppStream metadata, package descriptions, CHANGELOG entries and documentation. Code comments, log
-messages and CLAUDE.md files are exempt.
+All text means every text in a repository and around it:
+
+- User-facing text: UI strings, setting descriptions, pack and data metadata, `.desktop` files, AppStream metadata,
+  package descriptions, CHANGELOG entries and documentation.
+- Developer text: READMEs, `docs/`, CLAUDE.md files, code comments and log messages.
+- The Claude Code plugins: skills, agents, review notes and lessons.
+- Commit messages and pull request descriptions.
+
+Text that is not ours keeps its words: code, commands, paths and identifiers, quotations, and the names and messages
+of other projects. A machine check covers user-facing text where a repository has one. Review covers the rest.
+Existing text that breaks a rule is corrected when a change edits it. Do not rewrite unrelated text in bulk.
 
 Sentences and procedures:
 
