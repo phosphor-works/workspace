@@ -16,7 +16,7 @@ A script is `return pluau.algorithm { metadata = {...}, tile = function(ctx) ...
 of keys. **A key that list does not name is dropped with no message**, in both directions. `pluau.d.luau` (same lib,
 `src/pluau/`) is the author-facing contract, and nothing checks it against the runtime. CI's `luau-analyze` job
 checks the stub's syntax and internal consistency only (its own comment says agreement is reviewed by hand), and
-`plasmazones/data/algorithms/.luaurc` declares `pluau` only by name in nonstrict mode, so the analyzer does not hold
+`data/algorithms/.luaurc` in phosphor-engine-libs declares `pluau` only by name in nonstrict mode, so the analyzer does not hold
 an algorithm's helper calls to the stub.
 
 Follow a finished example end to end: `grep -rn supportsSingleWindow ../phosphor-libs plasmazones/src plasmazones/dbus`.
@@ -97,7 +97,8 @@ is private to phosphor-scripting.
    (`phosphor-works:luau-reviewer` checks this).
 
 `name`, `description` and each `customParams` `description` are user-facing prose under the CLAUDE.md plain-prose
-rules. `check-conventions.py` only reaches double-quoted `description = "..."` in `plasmazones/data/algorithms/*.luau`.
+rules. `check-conventions.py` (its `engine-data-prose` rule, over the pinned phosphor-engine-libs tree) only reaches
+double-quoted `description = "..."` in `data/algorithms/*.luau`.
 Check `name`, other quoting styles and the scaffold's generated text yourself.
 
 **customParams.** `parseCustomParam` reads `name`, `type`, `default`, `description`, `min`, `max` and `options`.

@@ -7,7 +7,7 @@ Read by `phosphor-works:luau-reviewer` in addition to its own instructions.
 
 ## Partition coverage
 
-- `plasmazones/data/algorithms/*.luau` and the Luau-facing glue in `../phosphor-engine-libs/libs/phosphor-tiles` and `../phosphor-libs/libs/phosphor-scripting`. Algorithms are scripted through phosphor-tiles.
+- The bundled algorithms in `../phosphor-engine-libs/data/algorithms/*.luau` and the Luau-facing glue in `../phosphor-engine-libs/libs/phosphor-tiles` and `../phosphor-libs/libs/phosphor-scripting`. Algorithms are scripted through phosphor-tiles.
 - Verify a pluau helper you flag against its definition in phosphor-tiles, and check every algorithm that uses it.
 - Evidence example: "`migrateWindowTo` rewrites the live screen but carries the zone (SnapState.cpp:430-441)" is a finding. "The capture is stale because it never re-homes" is a hypothesis.
 
@@ -29,7 +29,7 @@ Read by `phosphor-works:luau-reviewer` in addition to its own instructions.
 
 ## Licensing
 
-- `plasmazones/data/algorithms/**` is GPL-3.0-or-later. Luau inside `../phosphor-libs/libs/phosphor-*` follows the library (LGPL-2.1-or-later).
+- The bundled algorithms (`../phosphor-engine-libs/data/algorithms/**`) are LGPL-2.1-or-later, like everything in phosphor-engine-libs. Luau inside `../phosphor-libs/libs/phosphor-*` follows the library (LGPL-2.1-or-later).
 
 ## Known past-bug shapes (from prior audits)
 
