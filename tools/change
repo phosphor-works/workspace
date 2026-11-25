@@ -175,12 +175,15 @@ def cmd_status(args):
         count = ahead(repo, name, local)
         if count is not None:
             parts.append(f'{count} commit(s)')
-        waiting = unpushed(repo, name, local, remote)
+        # A merged pull request's branch is often deleted on origin, so look
+        # the pull request up even when origin has no branch.
+        pr = pull_request(repo, name)
+        merged = pr is not None and pr['state'] == 'MERGED'
+        waiting = 0 if merged and not remote else unpushed(repo, name, local, remote)
         if waiting:
             parts.append(f'{waiting} not pushed')
         if not local:
             parts.append('only on origin')
-        pr = pull_request(repo, name) if remote else None
         if pr:
             parts.append(f'#{pr["number"]} {pr["state"].lower()}')
             if pr['state'] == 'OPEN':
@@ -220,6 +223,10 @@ def cmd_push(args):
         if not remote and not ahead(repo, name, local):
             print(f'{repo}: no commits on {name}, not pushed')
             continue
+        existing = pull_request(repo, name)
+        if existing and existing['state'] != 'OPEN':
+            print(f'{repo}: #{existing["number"]} is {existing["state"].lower()}, not pushed')
+            continue
         if unpushed(repo, name, local, remote):
             git(repo, 'push', '--quiet', '-u', 'origin', name)
             print(f'{repo}: pushed')
@@ -230,8 +237,7 @@ def cmd_push(args):
             url = run(cmd, cwd=repo_dir(repo)).stdout.strip().splitlines()[-1]
             print(f'{repo}: opened {url}')
 
-    prs = [(slug(repo), pr) for repo, _, remote in members(name) if remote
-           for pr in [pull_request(repo, name)] if pr]
+    prs = [(slug(repo), pr) for repo, _, _ in members(name) for pr in [pull_request(repo, name)] if pr]
     if len(prs) < 2:
         return 0
     section = set_section(name, prs)
