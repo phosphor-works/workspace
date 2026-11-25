@@ -11,8 +11,8 @@
 # app token, each update runs the repository's full CI before it is merged.
 #
 # The app needs Contents and Pull requests (read and write) on the
-# repositories below. Its client ID is the repository variable
-# PHOSPHOR_BOT_CLIENT_ID and its private key the secret PHOSPHOR_BOT_PRIVATE_KEY.
+# repositories below. Its client ID and private key are the repository
+# secrets PHOSPHOR_BOT_CLIENT_ID and PHOSPHOR_BOT_PRIVATE_KEY.
 
 name: Flake update
 
@@ -46,7 +46,7 @@ jobs:
         id: token
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
-          client-id: ${{ vars.PHOSPHOR_BOT_CLIENT_ID }}
+          client-id: ${{ secrets.PHOSPHOR_BOT_CLIENT_ID }}
           private-key: ${{ secrets.PHOSPHOR_BOT_PRIVATE_KEY }}
           owner: phosphor-works
           repositories: ${{ matrix.repo }}
