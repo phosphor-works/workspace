@@ -32,6 +32,7 @@ from concurrent.futures import ThreadPoolExecutor
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
@@ -102,8 +103,13 @@ def default_name():
 def pull_request(repo, name):
     """The open or merged pull request of branch NAME, as gh pr view JSON, or None."""
     fields = 'number,url,state,title,body,mergeable,statusCheckRollup'
-    result = run(['gh', 'pr', 'list', '--repo', slug(repo), '--head', name, '--state', 'all',
-                  '--json', fields, '--limit', '1'], check=False)
+    cmd = ['gh', 'pr', 'list', '--repo', slug(repo), '--head', name, '--state', 'all', '--json', fields, '--limit', '1']
+    # GitHub's GraphQL API sometimes fails a query once ("Something went wrong").
+    for attempt in range(3):
+        result = run(cmd, check=False)
+        if result.returncode == 0:
+            break
+        time.sleep(2 * (attempt + 1))
     if result.returncode != 0:
         sys.exit(f'{repo}: gh pr list failed:\n{result.stderr.strip()}')
     found = json.loads(result.stdout)
