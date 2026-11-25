@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Checks the repository templates: tools/new-repo generates a library
+# repository and an app, and each must be what a new repository needs from
+# its first commit. No token left, the shared files and the CLAUDE.md block
+# that tools/sync checks, clang-format and qmlformat, the app's .desktop file
+# and AppStream metadata, and a build with no warnings whose tests pass.
+
+name: Templates
+
+on:
+  pull_request:
+    paths: ["templates/**", "tools/new-repo", "tools/sync", "sync/**", ".github/workflows/templates.yml"]
+  push:
+    branches: [main]
+    paths: ["templates/**", "tools/new-repo", "tools/sync", "sync/**", ".github/workflows/templates.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate, check and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: archlinux:latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Bootstrap git and Python
+        run: pacman -Syu --noconfirm --needed git python
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: workspace
+
+      # tools/new-repo copies the license texts from the sibling surface packs.
+      - name: Clone the surface packs
+        run: git clone --depth 1 https://github.com/phosphor-works/phosphor-surface-packs.git
+
+      - name: Generate a library repository and an app
+        run: |
+          set -euo pipefail
+          workspace/tools/new-repo phosphor-sample-libs --kind library --lib phosphor-sample \
+            --description "Sample libraries that check the repository template."
+          workspace/tools/new-repo Sample --kind app --description "A sample program that checks the repository template."
+
+      - name: Install the packages the repositories list
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(cat */.github/ci/arch-packages.txt | sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' | sort -u)
+          pacman -S --noconfirm --needed "${packages[@]}" clang qt6-declarative desktop-file-utils appstream
+
+      - name: No token left
+        run: |
+          set -euo pipefail
+          if grep -rnoE '@[A-Za-z_]+@' phosphor-sample-libs Sample --exclude-dir=.git | grep -vE 'PACKAGE_INIT|_QT_MIN@'; then
+            echo "::error::a template token was not filled in"
+            exit 1
+          fi
+
+      - name: Shared files, CLAUDE.md and pins
+        run: python3 -I workspace/tools/sync --check --repo phosphor-sample-libs --repo Sample
+
+      - name: Format
+        run: |
+          set -euo pipefail
+          for repo in phosphor-sample-libs Sample; do
+            mapfile -t cpp < <(git -C "$repo" ls-files --others --exclude-standard '*.cpp' '*.h')
+            (cd "$repo" && clang-format --dry-run -Werror "${cpp[@]}")
+          done
+          for file in $(git -C Sample ls-files --others --exclude-standard '*.qml'); do
+            diff <(/usr/lib/qt6/bin/qmlformat "Sample/$file") "Sample/$file"
+          done
+
+      - name: The app's desktop entry and AppStream metadata
+        run: |
+          set -euo pipefail
+          desktop-file-validate Sample/sample/data/org.phosphor_works.Sample.desktop
+          appstreamcli validate --no-net Sample/sample/data/org.phosphor_works.Sample.metainfo.xml
+
+      - name: Build and test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set -euo pipefail
+          pattern=':[0-9]+:[0-9]+: warning:'
+          for repo in phosphor-sample-libs Sample; do
+            (cd "$repo" && cmake --preset dev && cmake --build --preset dev -j "$(nproc)" 2>&1 | tee build.log)
+            if grep -qE "$pattern" "$repo/build.log"; then
+              echo "::error::$repo builds with warnings"
+              grep -E "$pattern" "$repo/build.log"
+              exit 1
+            fi
+            (cd "$repo" && ctest --preset dev -j "$(nproc)")
+          done

@@ -39,7 +39,7 @@ development only. `packaging` owns releases, rebuild watching and CI images, and
 | `claude/conventions.md` | The rules every repo's CLAUDE.md imports |
 | `.claude-plugin/marketplace.json`, `plugins/` | The Claude Code plugins: `phosphor-works` (shared) and one per app |
 | `plugins/phosphor-works/lessons/` | The lessons, one file each, that the lesson index searches |
-| `.github/workflows/` | `cpp-ci.yml` (the CI every C++ repo calls), `flake-update.yml` (weekly `flake.lock` pull requests in every repo with a flake), `superbuild.yml` (nightly, pull requests that change a build input with the change set of their branch, change sets by hand) and `plugins.yml` |
+| `.github/workflows/` | `cpp-ci.yml` (the CI every C++ repo calls), `flake-update.yml` (weekly `flake.lock` pull requests in every repo with a flake), `superbuild.yml` (nightly, pull requests that change a build input with the change set of their branch, change sets by hand), `templates.yml` (generates a library repository and an app from `templates/` and checks and builds them, when the templates, the generator or `tools/sync` change) and `plugins.yml` |
 
 ## Build and test
 
