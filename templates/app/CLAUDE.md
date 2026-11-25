@@ -1,16 +1,13 @@
 <!-- SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-# @REPO@
+<!-- BEGIN shared: tools/sync writes this block from workspace/sync/claude-header.md. Change it there. -->
+<!-- END shared -->
+
+## Overview
 
 @DESCRIPTION@ Qt 6, C++20 and QML. Application ID `@APPID@` (the `.desktop` file, the AppStream id and the
 icon).
-
-The rules every phosphor-works repository follows come from the workspace repository, imported below. This file adds
-@REPO@'s own. The shared Claude Code tooling comes from the `phosphor-works` plugin, which `.claude/settings.json`
-enables and `workspace/tools/setup` installs.
-
-@../workspace/claude/conventions.md
 
 ## Layout
 
@@ -22,13 +19,8 @@ enables and `workspace/tools/setup` installs.
 | `@app@/data/` | The `.desktop` file and the AppStream metadata, which install with the program |
 | `libs/@app@-core/` | `@AppNs@Core`: code that another program could use, as a library of its own (`LGPL-2.1-or-later`) |
 
-- The application, its tests and its tools are `GPL-3.0-or-later`. `libs/**` is `LGPL-2.1-or-later`, its tests
-  included. The `.desktop` file and the AppStream metadata are `CC0-1.0`. `REUSE.toml` licenses the files that cannot
-  hold a header, and the license texts are in `LICENSES/`.
 - A new library in `libs/` has the shape of `libs/@app@-core`: its own `CMakeLists.txt`, `project()`, `include/`,
   `src/`, `tests/` and find_package config. Add it in the root `CMakeLists.txt` before the application.
-- The `.desktop` file, the AppStream metadata, UI strings and `CHANGELOG.md` are user-facing text. A user-visible
-  change gets a line under `## Unreleased` in `CHANGELOG.md`.
 
 ## Build and test
 
@@ -40,3 +32,10 @@ enables and `workspace/tools/setup` installs.
 - `cmake/@PROJECT@Dependencies.cmake` pins the phosphor-libs commit (VERSION, URL, FILE and SHA256, changed together)
   and CPM.cmake. `-DCPM_phosphor-libs_SOURCE=<dir>` builds against a local checkout, and the workspace superbuild
   (`cmake --workflow --preset dev` in `../workspace`) builds it with every sibling library.
+
+## Rules
+
+- The application, its tests and its tools are `GPL-3.0-or-later`. `libs/**` is `LGPL-2.1-or-later`, its tests
+  included. The `.desktop` file and the AppStream metadata are `CC0-1.0`. `REUSE.toml` licenses the files that cannot
+  hold a header, and the license texts are in `LICENSES/`.
+- A user-visible change gets a line under `## Unreleased` in `CHANGELOG.md`.

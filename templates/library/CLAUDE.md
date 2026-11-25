@@ -1,15 +1,12 @@
 <!-- SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team -->
 <!-- SPDX-License-Identifier: LGPL-2.1-or-later -->
 
-# @REPO@
+<!-- BEGIN shared: tools/sync writes this block from workspace/sync/claude-header.md. Change it there. -->
+<!-- END shared -->
+
+## Overview
 
 @DESCRIPTION@ It is a library repository of phosphor-works and builds on phosphor-libs.
-
-The rules every phosphor-works repository follows come from the workspace repository, imported below. This file adds
-@REPO@'s own. The shared Claude Code tooling comes from the `phosphor-works` plugin, which `.claude/settings.json`
-enables and `workspace/tools/setup` installs.
-
-@../workspace/claude/conventions.md
 
 ## Layout
 
@@ -17,7 +14,6 @@ enables and `workspace/tools/setup` installs.
   find_package config, so it also configures alone. The root `CMakeLists.txt` adds them in dependency order.
 - Headers are `<PhosphorX/...>`, the target `PhosphorX::PhosphorX`, the export macro `PHOSPHORX_EXPORT` (from
   `generate_export_header`) and the namespace `PhosphorX`. The first library is `libs/@LIB@` (`@LIBTARGET@`).
-- Everything here is `LGPL-2.1-or-later`, the tests included.
 
 ## Build and test
 
@@ -28,6 +24,10 @@ enables and `workspace/tools/setup` installs.
   off. Add `flake.nix` and `nix/package.nix` and drop `nix: false` from `ci.yml` to turn them on.
 - `cmake/@PROJECT@Dependencies.cmake` pins the phosphor-libs commit (VERSION, URL, FILE and SHA256, changed together)
   and CPM.cmake. `-DCPM_phosphor-libs_SOURCE=<dir>` builds against a local checkout.
+
+## Rules
+
+- Everything here is `LGPL-2.1-or-later`, the tests included.
 
 ## Other repositories
 

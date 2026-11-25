@@ -23,5 +23,6 @@
     "phosphor-bots": {}
   },
   "lefthook": "all",
+  "claude": "all",
   "ref": "v1"
 }

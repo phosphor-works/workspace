@@ -119,6 +119,11 @@ tools/sync            # write the shared files into every sibling repo
 tools/sync --check    # report what differs (the nightly runs it too)
 ```
 
+Every repo's CLAUDE.md starts with the same block, from `sync/claude-header.md`: the title, where the shared rules
+and tooling come from, and the import of `claude/conventions.md`. `tools/sync` writes it between its BEGIN and END
+markers. The rest of the file is the repo's own, under the standard sections in their order (`SECTIONS` in
+`tools/sync`), and `--check` reports a missing, unknown or misplaced one.
+
 The git hooks every repo shares are in `lefthook/common.yml`: clang-format and qmlformat on the staged files, and the
 Conventional Commits check. Each repo's `lefthook.yml` pulls them through `remotes:` and adds only its own commands.
 `tools/setup` runs `lefthook install` in every repo.
