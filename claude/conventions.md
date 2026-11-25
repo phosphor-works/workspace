@@ -3,9 +3,14 @@
 
 # phosphor-works conventions
 
-These rules apply to every phosphor-works repository. Each repository's CLAUDE.md imports this file with
-`@../workspace/claude/conventions.md` and adds only its own rules. When a repository rule and this file disagree,
-change one of them so that they agree.
+These rules apply to every phosphor-works repository. Each repository's CLAUDE.md has two parts. The first is the
+shared block that `workspace/tools/sync` writes from `workspace/sync/claude-header.md`: the title, where the rules
+and tooling come from, and the import of this file. Change it there, never in a repository. The second is the
+repository's own, under these sections in this order: `Overview`, `Layout` and `Build and test` (always), then
+`Rules`, `Code`, `Skills and agents`, `Other repositories` and `Where things are` (when the repository has some).
+A section adds only what this file does not say. When a repository rule and this file disagree, change one of them
+so that they agree. `tools/sync --check` reports a block that drifted and a section that is missing, unknown or out
+of order.
 
 ## The repositories
 
@@ -16,7 +21,9 @@ change one of them so that they agree.
   builds one app against the sibling libraries. Each preset has an `-asan` twin.
 - A change that spans repositories is a change set: one branch name in each repository that it touches.
   `workspace/tools/change` makes the branches, opens the pull requests and links them (`start`, `push`), and shows
-  the set (`status`). Merge the libraries first. Then move the app's pin to the merged commit.
+  the set (`status`). Merge the libraries first. Then move the app's pin to the merged commit: its VERSION, URL,
+  FILE and SHA256 together in `cmake/<Project>Dependencies.cmake`, and the same archive in each Nix or packaging
+  recipe of the app. `-DCPM_<library>_SOURCE=<dir>` builds an app against a local checkout before the pin moves.
 - When the superbuild or the shared tooling finds a problem in one repository, fix it in that repository. Do not add
   a workaround to `workspace`.
 - The Claude skills, agents and guard come from the plugins in `workspace/plugins/`. Change them in the `workspace`
@@ -29,15 +36,22 @@ change one of them so that they agree.
 - Do what was asked, and nothing more. Ask only about real decisions. When the next step is clear, do it.
 - Solve the root cause. Do not add workarounds, TODOs or temporary fixes.
 - Read a file before you edit it. Put temporary files in the session scratchpad, never in a repository.
+- Trust what the user says they did (installed, restarted, tested). Do not question it.
 - Never use `sudo`, and never install into the system. To check an install layout, install into a directory under
-  `/tmp` (`DESTDIR` or `--prefix`).
+  `/tmp` (`DESTDIR` or `--prefix`). When a task needs a system package, tell the user which one and why.
 - Never touch the user's running desktop or apps: no D-Bus calls to their session, no restarts, no `pkill` or
-  `killall`. Test against a nested session with its own bus and display.
+  `killall`. Test against a nested session with its own bus and display. To stop a process that you started, list
+  it with `pgrep -a NAME` and run `kill PID`, never `kill $(pgrep -f ...)`.
+- Never commit a secret, a credential or an `.env` file, and never put a token in a command line or a log line.
+- The Bash tool runs zsh. Quote a glob that can match nothing (`'*.md'`), and do not start a word with `=`
+  (`echo ====` fails).
 - Run one build at a time, inside a memory cap:
   `systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 <command>`. Without the cap, systemd-oomd can stop
   the user's session. The presets build with 3 jobs.
 - A change is finished when it builds with no warnings and its tests pass. A green suite is not proof that a change
   in behavior works: verify it live where the repository's verify skill says so.
+- The shared git hooks run clang-format and qmlformat on the staged files and check the commit message.
+  `lefthook install` sets them up in a checkout, and `workspace/tools/setup` runs it in every repository.
 - `.clang-format`, `.editorconfig`, `CMakePresets.json` and the shared git hooks come from `workspace/tools/sync`
   and `workspace/lefthook/common.yml`. Never change them in a repository: change them in `workspace` and run
   `tools/sync`. Every C++ repository has the presets `dev` (Debug, `build/`), `release`, `relwithdebinfo` and `asan`.

@@ -18,6 +18,11 @@ sync/repos.json says what goes where:
   (lefthook/common.yml) through `remotes:`. A repository without one gets a
   lefthook.yml that only does that. One with commands of its own is checked,
   not rewritten.
+- "claude": the repositories whose CLAUDE.md starts with the shared block
+  (sync/claude-header.md, between its BEGIN and END markers, after the SPDX
+  lines) and then has only the standard sections, in their order (SECTIONS).
+  tools/sync writes the block. The sections are each repository's own, and
+  --check reports a missing, unknown or misplaced one.
 - "ref": the tag of this repository that every repository uses the shared
   CI workflows (`phosphor-works/workspace/.github/workflows/<name>.yml@<ref>`)
   and the shared hooks (the `ref:` of the lefthook remote) at. tools/sync
@@ -40,6 +45,14 @@ MANIFEST = json.loads((HERE / 'sync/repos.json').read_text())
 REMOTE_URL = 'https://github.com/phosphor-works/workspace'
 REMOTE_CONFIG = 'lefthook/common.yml'
 REF = MANIFEST['ref']
+CLAUDE_HEADER = HERE / 'sync' / 'claude-header.md'
+CLAUDE_BEGIN = '<!-- BEGIN shared:'
+CLAUDE_END = '<!-- END shared -->'
+# The sections of a CLAUDE.md after the shared block, in this order. The
+# required ones come in every repository.
+SECTIONS = ['Overview', 'Layout', 'Build and test', 'Rules', 'Code', 'Skills and agents', 'Other repositories',
+            'Where things are']
+REQUIRED_SECTIONS = ['Overview', 'Layout', 'Build and test']
 WORKFLOW_USE = re.compile(r'(phosphor-works/workspace/\.github/workflows/[\w.-]+\.ya?ml)@([\w./-]+)')
 REMOTE_REF = re.compile(r'(git_url: ' + re.escape(REMOTE_URL) + r'\n\s+ref: )(\S+)')
 LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 Phosphor Works Team
@@ -129,6 +142,46 @@ def pin_refs(root):
     return out
 
 
+def claude_block(repo):
+    conventions = 'claude/conventions.md' if repo == 'workspace' else '../workspace/claude/conventions.md'
+    return CLAUDE_HEADER.read_text().replace('@REPO@', repo).replace('@CONVENTIONS@', conventions)
+
+
+def claude_md(repo, root):
+    """(the CLAUDE.md with the shared block as it must be, or None when it is so already, [problems])."""
+    path = root / 'CLAUDE.md'
+    if not path.exists():
+        return None, ['missing']
+    text = path.read_text()
+    lines = text.splitlines(keepends=True)
+    begin = next((i for i, line in enumerate(lines) if line.startswith(CLAUDE_BEGIN)), None)
+    end = next((i for i, line in enumerate(lines) if line.startswith(CLAUDE_END)), None)
+    if begin is None or end is None or end < begin:
+        return None, ['has no shared block (the BEGIN shared and END shared markers of sync/claude-header.md)']
+    problems = []
+    if any(line.strip() and not line.startswith('<!-- SPDX-') for line in lines[:begin]):
+        problems.append('has text before the shared block other than the SPDX lines')
+    headings, fence = [], False
+    for line in lines[end + 1:]:
+        if line.startswith('```'):
+            fence = not fence
+        elif not fence and line.startswith('# '):
+            problems.append(f'has a second title: {line.strip()}')
+        elif not fence and line.startswith('## '):
+            headings.append(line[3:].strip())
+    unknown = [h for h in headings if h not in SECTIONS]
+    if unknown:
+        problems.append('has sections that are not standard: ' + ', '.join(unknown) + ' (SECTIONS in tools/sync)')
+    known = [SECTIONS.index(h) for h in headings if h in SECTIONS]
+    if known != sorted(set(known)) or len(known) != len(set(known)):
+        problems.append('has its sections out of order or twice: ' + ', '.join(headings))
+    missing = [h for h in REQUIRED_SECTIONS if h not in headings]
+    if missing:
+        problems.append('misses the sections ' + ', '.join(missing))
+    want = ''.join(lines[:begin]) + claude_block(repo) + ''.join(lines[end + 1:])
+    return (want if want != text else None), problems
+
+
 def lefthook_problem(path):
     """Why PATH does not pull the shared hooks, or None."""
     if not path.exists():
@@ -172,6 +225,15 @@ def main():
                 written.append(f'{repo}/lefthook.yml')
             elif problem:
                 problems.append(f'{repo}/lefthook.yml: {problem}')
+        if repo in repos_of(MANIFEST.get('claude', [])):
+            want, claude_problems = claude_md(repo, root)
+            problems += [f'{repo}/CLAUDE.md: {p}' for p in claude_problems]
+            if want is not None:
+                if args.check:
+                    problems.append(f'{repo}/CLAUDE.md: its shared block differs from sync/claude-header.md')
+                else:
+                    (root / 'CLAUDE.md').write_text(want)
+                    written.append(f'{repo}/CLAUDE.md')
         for rel, content in pin_refs(root).items():
             if args.check:
                 problems.append(f'{repo}/{rel}: uses the shared workflows or hooks at a ref other than {REF}')

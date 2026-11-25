@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team
+# SPDX-License-Identifier: CC0-1.0
+[Desktop Entry]
+Type=Application
+Name=@AppName@
+Comment=@SUMMARY@
+Exec=@app@
+Icon=@APPID@
+Terminal=false
+Categories=Qt;Utility;
+StartupNotify=true
+StartupWMClass=@APPID@

@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team
+# SPDX-License-Identifier: @LICENSE@
+#
+# @REPO@: @DESCRIPTION@ It builds on phosphor-libs, the commit
+# cmake/@PROJECT@Dependencies.cmake pins.
+#
+# Standalone (`cmake --workflow --preset dev`) this tree adds phosphor-libs and
+# then its own code. An app or the workspace superbuild that adds it as a
+# subproject has added phosphor-libs already, and its pin is the one in use.
+
+# 3.23: the phosphor-libs tree added below asks for it (target_sources with
+# FILE_SET). The presets (CMakePresets.json) need 3.25.
+cmake_minimum_required(VERSION 3.23)
+
+project(@PROJECT@ VERSION 0.1.0 LANGUAGES C CXX)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(@PREFIX@_TOP_LEVEL ON)
+else()
+    set(@PREFIX@_TOP_LEVEL OFF)
+endif()
+
+# Top-level setup. Skipped as a subproject, where the app has done it.
+if(@PREFIX@_TOP_LEVEL)
+    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOMOC_PARALLEL_ENABLED ON)
+
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    endif()
+
+    set(QT_MIN_VERSION "6.10.0")
+    set(KF_MIN_VERSION "6.26.0")
+    find_package(ECM ${KF_MIN_VERSION} REQUIRED NO_MODULE)
+    set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+
+    # Before KDECMakeSettings, which includes CTest and locks BUILD_TESTING
+    # into the cache as ON.
+    option(BUILD_TESTING "Build the test suite" OFF)
+
+    include(KDEInstallDirs)
+    include(KDECMakeSettings)
+    include(KDECompilerSettings NO_POLICY_SCOPE)
+    include(FeatureSummary)
+
+    # The Qt6 string-literal rule as a compile error: no implicit const char*
+    # to QString.
+    add_compile_definitions(QT_NO_CAST_FROM_ASCII)
+
+    include(KDEClangFormat)
+    file(GLOB_RECURSE @PREFIX@_CLANG_FORMAT_FILES
+@FORMAT_GLOBS@
+    )
+    kde_clang_format(${@PREFIX@_CLANG_FORMAT_FILES})
+endif()
+
+if(NOT DEFINED QT_MIN_VERSION)
+    set(QT_MIN_VERSION "6.10.0")
+endif()
+
+find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+
+if(QT_KNOWN_POLICY_QTP0001)
+    qt_policy(SET QTP0001 NEW)
+endif()
+if(QT_KNOWN_POLICY_QTP0004)
+    qt_policy(SET QTP0004 NEW)
+endif()
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/@PROJECT@Dependencies.cmake")
+@prefix@_add_phosphor_libs()
+# The suite folder's name (PHOSPHOR_SUITE_DIRECTORY_NAME) and the shared test
+# helpers (PhosphorTestIsolation, PhosphorTestPch) come from phosphor-libs.
+include("${PHOSPHOR_LIBS_CMAKE_DIR}/PhosphorSuite.cmake")
+list(APPEND CMAKE_MODULE_PATH "${PHOSPHOR_LIBS_CMAKE_DIR}")
+
+@SUBDIRS@
+
+if(@PREFIX@_TOP_LEVEL)
+    feature_summary(WHAT REQUIRED_PACKAGES_FOUND REQUIRED_PACKAGES_NOT_FOUND
+                         OPTIONAL_PACKAGES_FOUND OPTIONAL_PACKAGES_NOT_FOUND
+                    FATAL_ON_MISSING_REQUIRED_PACKAGES)
+endif()

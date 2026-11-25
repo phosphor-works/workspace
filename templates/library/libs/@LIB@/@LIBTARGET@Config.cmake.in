@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(Qt6 @@LIBUPPER@_QT_MIN@ COMPONENTS Core)
+
+include("${CMAKE_CURRENT_LIST_DIR}/@LIBTARGET@Targets.cmake")
+
+check_required_components(@LIBTARGET@)

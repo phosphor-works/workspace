@@ -24,7 +24,7 @@ closes windows or kills processes there damages their work.
 
    ```sh
    systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 \
-       cmake --build build -j6 --target afterglow_native_tests
+       cmake --build build -j3 --target afterglow_native_tests
    ```
 
 2. Run it in a headless nested KWin. The runner starts itself under `dbus-run-session`, so KWin gets a private

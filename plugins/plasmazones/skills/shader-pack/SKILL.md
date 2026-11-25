@@ -77,11 +77,11 @@ pinned by `static_assert` on size and offsets:
 The `dev` preset builds `build/` with tools on. The validator is in the default build; the renderer needs `BUILD_TOOLS=ON`.
 
 ```bash
-cmake --build build --parallel 6 --target plasmazones-shader-validate plasmazones-shader-render
+cmake --build build -j3 --target plasmazones-shader-validate plasmazones-shader-render
 python3 scripts/validate-json-schemas.py plasmazones/data/<family>/<id>/metadata.json   # OK (1 file(s) validated)
 build/bin/plasmazones-shader-validate --<animation|overlay|surface|pointer> plasmazones/data/<family>/<id>
 python3 scripts/check-conventions.py plasmazones/data/<family>/<id>/*
-ctest --test-dir build -j6 --output-on-failure -R 'shader_validate|_shader_|_pack_|pack_model|entry_scaffold|zone_uniform|shell_chrome|pointer'
+ctest --test-dir build -j3 --output-on-failure -R 'shader_validate|_shader_|_pack_|pack_model|entry_scaffold|zone_uniform|shell_chrome|pointer'
 ```
 
 - The validator has no `--help` (usage, exit 2); exit 1 is errors. It compiles each stage for Qt-RHI and both KWin

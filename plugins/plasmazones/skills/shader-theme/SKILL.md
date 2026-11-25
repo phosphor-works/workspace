@@ -161,7 +161,7 @@ them to the user dirs as gate 6 in `references/validation.md` shows.
 ### 6. Validate everything
 
 Run every gate in `references/validation.md` in order. For `--into repo`, that includes the
-full ctest run after a build with `--parallel 6`. Capture real output. Fix and re-run until
+full ctest run after a build with `-j3`. Capture real output. Fix and re-run until
 clean.
 
 ### 7. Render, critique and revise

@@ -98,7 +98,7 @@ gitignored; delete it before handing over anyway.
 
 ## 3. The bundled-tree tests (only when the packs live under `plasmazones/data/`)
 
-Configure once with `-DBUILD_TESTING=ON`, build with `--parallel 6`, then:
+Configure once with `-DBUILD_TESTING=ON`, build with `-j3`, then:
 
 ```bash
 ctest --test-dir build -N | grep -E 'strip_pack_contract|shell_chrome'   # both are conditional targets, see below

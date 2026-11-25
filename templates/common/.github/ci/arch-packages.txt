@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team
+# SPDX-License-Identifier: @LICENSE@
+#
+# The Arch packages CI installs to configure, build and test @REPO@ and
+# phosphor-libs under it. One package per line. A comment after `#` is
+# ignored.
+base-devel
+git
+ccache
+cmake
+ninja
+extra-cmake-modules
+qt6-base
+qt6-declarative
+qt6-shadertools
+qt6-svg
+qt6-wayland
+wayland
+wayland-protocols
+# Qt declares QVulkanInstance only when the Vulkan headers are present, and
+# phosphor-libs' phosphor-surfaces uses it wherever Qt was built with Vulkan.
+vulkan-headers
+# Optional lookups in phosphor-libs, installed so CI builds what they switch
+# on.
+kglobalaccel
+kirigami
+# The offscreen tests' runtime.
+mesa

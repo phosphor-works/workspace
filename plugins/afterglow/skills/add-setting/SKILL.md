@@ -35,7 +35,7 @@ source of the ranges, choices and descriptions, and the structs in `Settings.h` 
 7. **Build, then regenerate the reference:**
 
    ```sh
-   cmake --build build -j6 && python3 tools/generate-reference.py build/afterglow/afterglow
+   cmake --build build -j3 && python3 tools/generate-reference.py build/afterglow/afterglow
    ```
 
    Never edit `docs/CONFIGURATION.md` by hand.

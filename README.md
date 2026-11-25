@@ -73,6 +73,20 @@ Turn an app off with `-DWORKSPACE_BUILD_<App>=OFF` (`PlasmaZones`, `Lambent`, `A
 A build here uses every repo's current checkout, while each app's own CI builds the commits it pins. A failure
 here that an app's CI does not show usually means that app's pin is behind a library's `main`.
 
+## New repositories
+
+```sh
+tools/new-repo phosphor-<name>-libs --kind library --lib phosphor-<name> --description "<sentence>."
+tools/new-repo <Name> --kind app --description "<sentence>."
+```
+
+`tools/new-repo` writes a repository beside this one from `templates/`: phosphor-libs pinned at its current `main`,
+the shared presets, CI and git hooks, the Claude Code settings, a CLAUDE.md that imports the conventions, REUSE
+licensing and a test. A library repository has the shape of phosphor-libs, and an app the shape of Afterglow and
+Lambent. It also adds the repository to `workspace.repos`, `sync/repos.json` and the superbuild. The
+`phosphor-works:new-repo` skill runs it and does the rest: the build, the first commit, the GitHub repository and
+this repository's pull request.
+
 ## Change sets
 
 A change that spans repos is a change set: one branch name in each repo it touches. `tools/change` makes the
@@ -104,6 +118,11 @@ repo adds to its presets. Change them here, never in a repo:
 tools/sync            # write the shared files into every sibling repo
 tools/sync --check    # report what differs (the nightly runs it too)
 ```
+
+Every repo's CLAUDE.md starts with the same block, from `sync/claude-header.md`: the title, where the shared rules
+and tooling come from, and the import of `claude/conventions.md`. `tools/sync` writes it between its BEGIN and END
+markers. The rest of the file is the repo's own, under the standard sections in their order (`SECTIONS` in
+`tools/sync`), and `--check` reports a missing, unknown or misplaced one.
 
 The git hooks every repo shares are in `lefthook/common.yml`: clang-format and qmlformat on the staged files, and the
 Conventional Commits check. Each repo's `lefthook.yml` pulls them through `remotes:` and adds only its own commands.

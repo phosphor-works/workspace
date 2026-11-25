@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team -->
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>@APPID@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>@AppName@</name>
+  <summary>@SUMMARY@</summary>
+  <developer id="org.phosphor_works">
+    <name>Phosphor Works Team</name>
+  </developer>
+  <description>
+    <p>@DESCRIPTION@</p>
+  </description>
+  <url type="homepage">https://github.com/phosphor-works/@REPO@</url>
+  <url type="bugtracker">https://github.com/phosphor-works/@REPO@/issues</url>
+  <url type="vcs-browser">https://github.com/phosphor-works/@REPO@</url>
+  <launchable type="desktop-id">@APPID@.desktop</launchable>
+  <provides>
+    <binary>@app@</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+</component>

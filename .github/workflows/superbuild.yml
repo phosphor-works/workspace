@@ -21,7 +21,7 @@ on:
     - cron: "17 4 * * *"
   pull_request:
     # Plugins, conventions and docs do not change what the superbuild builds.
-    paths-ignore: [".claude/**", ".claude-plugin/**", "plugins/**", "claude/**", "tools/setup", "tools/change", "**.md", ".github/workflows/cpp-ci.yml", ".github/workflows/flake-update.yml"]
+    paths-ignore: [".claude/**", ".claude-plugin/**", "plugins/**", "claude/**", "tools/setup", "tools/change", "tools/new-repo", "templates/**", "**.md", ".github/workflows/cpp-ci.yml", ".github/workflows/flake-update.yml"]
   workflow_dispatch:
     inputs:
       change_set:

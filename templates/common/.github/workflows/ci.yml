@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: @YEAR@ Phosphor Works Team
+# SPDX-License-Identifier: @LICENSE@
+#
+# Pull request and main CI. The jobs (Arch, Lint, Nix) are the shared C++ CI
+# of the workspace repository (.github/workflows/cpp-ci.yml), which says what
+# each one does. This file passes only what differs here.
+#
+# phosphor-libs comes from the commit cmake/@PROJECT@Dependencies.cmake pins,
+# so its tests run here too. There is no flake yet, so the Nix jobs are off.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    name: CI
+    uses: phosphor-works/workspace/.github/workflows/cpp-ci.yml@@REF@
+    with:
+      pin-file: cmake/@PROJECT@Dependencies.cmake
+      nix: false
