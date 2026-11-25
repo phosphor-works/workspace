@@ -22,5 +22,6 @@
     "phosphor-components": {},
     "phosphor-bots": {}
   },
-  "lefthook": "all"
+  "lefthook": "all",
+  "ref": "v1"
 }
