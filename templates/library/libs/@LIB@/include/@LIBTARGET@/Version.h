@@ -7,9 +7,9 @@
 
 #include <QString>
 
-namespace @LIBTARGET @{
+namespace @LIBTARGET@ {
 
-    /// The version of the library, as project() in its CMakeLists.txt says.
-    @LIBUPPER @_EXPORT QString version();
+/// The version of the library, as project() in its CMakeLists.txt says.
+@LIBUPPER@_EXPORT QString version();
 
 } // namespace @LIBTARGET@

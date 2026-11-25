@@ -42,7 +42,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent.parent
 ROOT = HERE.parent
 TEMPLATES = HERE / 'templates'
-LICENSE_SOURCE = ROOT / 'phosphor-surface-packs' / 'LICENSES'
+LICENSE_SOURCE = HERE / 'LICENSES'
 PHOSPHOR_LIBS = 'https://github.com/phosphor-works/phosphor-libs'
 
 
@@ -163,8 +163,6 @@ def main():
     dest = ROOT / name
     if dest.exists():
         sys.exit(f'{dest} exists already.')
-    if not LICENSE_SOURCE.is_dir():
-        sys.exit(f'{LICENSE_SOURCE} is missing: clone phosphor-surface-packs (tools/setup).')
 
     ref = json.loads((HERE / 'sync' / 'repos.json').read_text())['ref']
     print(f'Pinning phosphor-libs at its main from {PHOSPHOR_LIBS} ...')
