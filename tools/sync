@@ -83,9 +83,12 @@ def presets(extra):
         'version': 6,
         'cmakeMinimumRequired': {'major': 3, 'minor': 25, 'patch': 0},
         'configurePresets': configs,
-        'buildPresets': [{'name': n, 'configurePreset': n} for n in names],
+        # 3 jobs, so a build stays inside the memory cap of the conventions.
+        # Without it Ninja runs a job for each CPU.
+        'buildPresets': [{'name': 'base', 'hidden': True, 'jobs': 3}]
+                        + [{'name': n, 'inherits': 'base', 'configurePreset': n} for n in names],
         'testPresets': [{'name': 'base', 'hidden': True, 'output': {'outputOnFailure': True},
-                         'execution': {'noTestsAction': 'error'}}]
+                         'execution': {'noTestsAction': 'error', 'jobs': 3}}]
                        + [{'name': n, 'inherits': 'base', 'configurePreset': n} for n in names],
         'workflowPresets': [{'name': n, 'steps': [{'type': t, 'name': n} for t in ('configure', 'build', 'test')]}
                             for n in names],
