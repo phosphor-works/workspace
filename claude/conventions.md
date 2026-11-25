@@ -14,8 +14,9 @@ change one of them so that they agree.
 - The `workspace` superbuild builds the libraries and the apps in one tree. Use it to change a library and an app
   together: `cmake --workflow --preset dev` builds everything, and `--preset plasmazones`, `lambent` or `afterglow`
   builds one app against the sibling libraries. Each preset has an `-asan` twin.
-- A change that spans repositories is a change set: one branch name in each repository that it touches. Merge the
-  libraries first. Then move the app's pin to the merged commit.
+- A change that spans repositories is a change set: one branch name in each repository that it touches.
+  `workspace/tools/change` makes the branches, opens the pull requests and links them (`start`, `push`), and shows
+  the set (`status`). Merge the libraries first. Then move the app's pin to the merged commit.
 - When the superbuild or the shared tooling finds a problem in one repository, fix it in that repository. Do not add
   a workaround to `workspace`.
 - The Claude skills, agents and guard come from the plugins in `workspace/plugins/`. Change them in the `workspace`

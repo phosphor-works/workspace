@@ -73,6 +73,26 @@ Turn an app off with `-DWORKSPACE_BUILD_<App>=OFF` (`PlasmaZones`, `Lambent`, `A
 A build here uses every repo's current checkout, while each app's own CI builds the commits it pins. A failure
 here that an app's CI does not show usually means that app's pin is behind a library's `main`.
 
+## Change sets
+
+A change that spans repos is a change set: one branch name in each repo it touches. `tools/change` makes the
+branches, opens the pull requests and links them:
+
+```sh
+tools/change start feat/new-api phosphor-libs PlasmaZones   # the branch, from origin/main, in each repo
+tools/change status                                         # commits, pull request and checks of each repo
+tools/change push                                           # push, open the missing pull requests, link them all
+tools/change build                                          # the superbuild on the set, in GitHub Actions
+```
+
+`status`, `push` and `build` take the set's name, or use the branch of the current directory. Every pull request of
+the set gets a "Change set" section that lists the others, and `push` updates it when a repo joins. The list is in
+merge order, libraries first. After a library merges, move each app's pin to the merged commit before the app
+merges.
+
+A pull request on `workspace` runs the superbuild with every repo that has the same branch, so a set that includes
+`workspace` builds there on its own. `tools/change build` is for a set with no `workspace` branch.
+
 ## Shared files and hooks
 
 Every repo holds the same `.clang-format` and `.editorconfig`, and every C++ repo the same `CMakePresets.json`:
