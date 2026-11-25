@@ -1,6 +1,6 @@
 {
   "name": "plasmazones",
   "description": "PlasmaZones skills and agents: build, live verification, settings, Luau algorithms, shader packs and themes, domain reviewers and triage.",
-  "author": { "name": "fuddlesworth" },
+  "author": { "name": "Phosphor Works Team" },
   "license": "GPL-3.0-or-later"
 }
