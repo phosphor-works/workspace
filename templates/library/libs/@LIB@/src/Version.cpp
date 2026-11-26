@@ -3,9 +3,11 @@
 
 #include <@LIBTARGET@/Version.h>
 
-namespace @LIBTARGET @{
+namespace @LIBTARGET@ {
 
-    QString version(){return QStringLiteral(@LIBUPPER @_VERSION_STRING);
+QString version()
+{
+    return QStringLiteral(@LIBUPPER@_VERSION_STRING);
 }
 
 } // namespace @LIBTARGET@

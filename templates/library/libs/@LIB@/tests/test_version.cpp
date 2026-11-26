@@ -5,13 +5,15 @@
 
 #include <QTest>
 
-class TestVersion : public QObject {
-  Q_OBJECT
+class TestVersion : public QObject
+{
+    Q_OBJECT
 
 private Q_SLOTS:
-  void versionIsTheProjectVersion() {
-    QCOMPARE(@LIBTARGET @ ::version(), QStringLiteral("0.1.0"));
-  }
+    void versionIsTheProjectVersion()
+    {
+        QCOMPARE(@LIBTARGET@::version(), QStringLiteral("0.1.0"));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestVersion)

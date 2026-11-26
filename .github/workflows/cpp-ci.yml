@@ -6,23 +6,31 @@
 #
 #   jobs:
 #     ci:
-#       uses: phosphor-works/workspace/.github/workflows/cpp-ci.yml@v1
+#       uses: phosphor-works/workspace/.github/workflows/cpp-ci.yml@v2
 #       with:
 #         pin-file: cmake/LambentDependencies.cmake
 #         nix-verify: test -x result/bin/lambent
 #
 # The jobs:
 #
-#   * Arch, and Fedora where `fedora` is true: configure, build and test from
-#     one shared preset, with a compiler cache. A compiler warning fails the
-#     build. The install is staged in a temporary directory.
+#   * Arch with GCC, Arch with Clang where `clang` is true (the default), and
+#     Fedora where `fedora` is true: configure, build and test from one shared
+#     preset, with a compiler cache. A compiler warning fails the build: Clang
+#     warns about things that GCC does not, and the other way round. The
+#     install is staged in a temporary directory.
 #   * Lint: clang-format and qmlformat over every tracked C++ and QML file.
 #   * Nix, where the repository has a flake: `nix flake check` (the package
 #     with its tests in the sandbox), the package, `nix-verify` on the
 #     package, and the dev shell, on x86_64 and aarch64.
 #
-# The repository holds the package lists: .github/ci/arch-packages.txt and,
-# for Fedora, .github/ci/fedora-packages.txt. One package on each line, and
+# A pull request that changes only documentation (Markdown, docs/, the
+# license texts, REUSE.toml, the Claude Code settings) builds and tests
+# nothing: the jobs report skipped. A document that a test reads, such as a
+# generated reference that a test compares, goes in `tested-docs` and counts
+# as code. A push to main always builds, which also keeps the caches warm.
+#
+# The repository holds the package lists: .github/ci/arch-packages.txt (for
+# both Arch jobs) and, for Fedora, .github/ci/fedora-packages.txt. One package on each line, and
 # `#` starts a comment.
 
 name: C++ CI
@@ -38,6 +46,10 @@ on:
         description: The configure, build and test preset.
         type: string
         default: dev
+      clang:
+        description: Also build and test on Arch with Clang.
+        type: boolean
+        default: true
       fedora:
         description: Also build and test on Fedora, from .github/ci/fedora-packages.txt.
         type: boolean
@@ -61,31 +73,76 @@ on:
         description: Bash that checks the package in ./result. It runs with `set -euo pipefail`.
         type: string
         default: ""
+      tested-docs:
+        description: Documents that a test reads (space-separated paths). A change to one builds and tests.
+        type: string
+        default: ""
 
 permissions:
   contents: read
 
 jobs:
+  # Whether the pull request changes more than documentation. A pull request
+  # is checked out as its merge commit, whose first parent is the base.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Code or only documentation
+        id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          TESTED: ${{ inputs.tested-docs }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=false
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            tested=false
+            for doc in $TESTED; do [ "$file" = "$doc" ] && tested=true; done
+            case "$file" in
+              *.md|docs/*|LICENSES/*|REUSE.toml|.claude/*) "$tested" || { echo "documentation: $file"; continue; } ;;
+            esac
+            echo "code: $file"
+            code=true
+          done < <(git diff --name-only HEAD^1 HEAD)
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # A matrix include that matches no listed distro would add a job, so each
     # distro's values come from its name instead.
-    name: ${{ matrix.distro == 'arch' && 'Arch' || format('Fedora {0}', inputs.fedora-version) }}
+    name: ${{ matrix.distro == 'arch' && 'Arch' || matrix.distro == 'arch-clang' && 'Arch (Clang)' || format('Fedora {0}', inputs.fedora-version) }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.build-timeout }}
     strategy:
       fail-fast: false
       matrix:
-        distro: ${{ fromJSON(inputs.fedora && '["arch", "fedora"]' || '["arch"]') }}
+        distro: ${{ fromJSON(format('["arch"{0}{1}]', inputs.clang && ', "arch-clang"' || '', inputs.fedora && ', "fedora"' || '')) }}
     container:
-      image: ${{ matrix.distro == 'arch' && 'archlinux:latest' || format('fedora:{0}', inputs.fedora-version) }}
+      image: ${{ matrix.distro == 'fedora' && format('fedora:{0}', inputs.fedora-version) || 'archlinux:latest' }}
     env:
       PRESET: ${{ inputs.preset }}
-      INSTALL: ${{ matrix.distro == 'arch' && 'pacman -S --noconfirm --needed' || 'dnf install -y' }}
-      PACKAGES: .github/ci/${{ matrix.distro }}-packages.txt
+      INSTALL: ${{ matrix.distro == 'fedora' && 'dnf install -y' || 'pacman -S --noconfirm --needed' }}
+      PACKAGES: .github/ci/${{ matrix.distro == 'fedora' && 'fedora' || 'arch' }}-packages.txt
     steps:
       # The images have no git, and actions/checkout needs it for a real clone.
       - name: Bootstrap git
-        run: ${{ matrix.distro == 'arch' && 'pacman -Syu --noconfirm --needed git' || 'dnf install -y git' }}
+        run: ${{ matrix.distro == 'fedora' && 'dnf install -y git' || 'pacman -Syu --noconfirm --needed git' }}
 
       - name: Checkout
         uses: actions/checkout@v7
@@ -100,6 +157,21 @@ jobs:
             [ "$try" = 3 ] && exit 1
             sleep 10
           done
+
+      # Before the configure, which picks the compiler from CC and CXX.
+      - name: Use Clang
+        if: matrix.distro == 'arch-clang'
+        run: |
+          # openmp is Clang's OpenMP runtime. GCC has its own, and KF6Kirigami's
+          # CMake package needs OpenMP, so without it a Kirigami app does not
+          # configure under Clang.
+          pacman -S --noconfirm --needed clang openmp
+          { echo "CC=clang"; echo "CXX=clang++"; } >> "$GITHUB_ENV"
+          # No unity build: Clang reports an unused variable or function only in
+          # the main file of a compile, and a unity build makes every source an
+          # included file. The GCC job keeps the unity build.
+          echo "CONFIGURE_ARGS=-DCMAKE_UNITY_BUILD=OFF" >> "$GITHUB_ENV"
+          clang++ --version
 
       - name: Show the Qt version
         run: qtpaths6 --qt-version || /usr/lib/qt6/bin/qtpaths --qt-version || true
@@ -134,7 +206,8 @@ jobs:
             ccache-${{ matrix.distro }}-${{ inputs.preset }}-main-
 
       - name: Configure
-        run: cmake --preset "$PRESET"
+        # CONFIGURE_ARGS is empty but in the Clang job.
+        run: cmake --preset "$PRESET" ${CONFIGURE_ARGS:-}
 
       # ccache replays the warnings of a cached compile, so a warning fails
       # every build until it is fixed, not only the first. -k 0 reports every
@@ -174,6 +247,8 @@ jobs:
 
   lint:
     name: Lint
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
@@ -222,7 +297,8 @@ jobs:
 
   nix:
     name: Nix (${{ matrix.system }})
-    if: inputs.nix
+    needs: changes
+    if: inputs.nix && needs.changes.outputs.code == 'true'
     timeout-minutes: ${{ inputs.nix-timeout }}
     strategy:
       fail-fast: false

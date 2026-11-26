@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: CC0-1.0
+#
+# The template sources hold tokens (@LIBTARGET@) and are C++ only once
+# tools/new-repo fills them in. The formatter would split the tokens, so it
+# leaves these files alone. The Templates workflow checks the generated
+# repositories against the shared .clang-format.
+DisableFormat: true
+SortIncludes: Never

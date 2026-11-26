@@ -85,7 +85,8 @@ the shared presets, CI and git hooks, the Claude Code settings, a CLAUDE.md that
 licensing and a test. A library repository has the shape of phosphor-libs, and an app the shape of Afterglow and
 Lambent. It also adds the repository to `workspace.repos`, `sync/repos.json` and the superbuild. The
 `phosphor-works:new-repo` skill runs it and does the rest: the build, the first commit, the GitHub repository and
-this repository's pull request.
+this repository's pull request. The Templates workflow generates one repository of each kind on every change to
+the templates, the generator or `tools/sync`, checks it as `tools/sync --check` does, and builds and tests it.
 
 ## Change sets
 

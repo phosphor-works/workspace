@@ -6,6 +6,9 @@
   tools/sync                 write the shared files into every sibling repository
   tools/sync --check         report every file that differs, and exit 1 if any does
   tools/sync --repo NAME     only that repository (repeatable)
+  tools/sync --check --repo NAME --documents KIND
+                             also check the documents of NAME, a README of
+                             shape KIND, when "documents" does not list it
 
 sync/repos.json says what goes where:
 - "files": files copied as they are (.clang-format, .editorconfig).
@@ -28,6 +31,9 @@ sync/repos.json says what goes where:
   repository too must pin the same commit of that one: the first pin wins in
   the build, and the library was tested with its own. --check reads the
   library's pins at the pinned commit from its sibling checkout.
+- "documents": the repositories whose READMEs and docs/ pages --check holds
+  to the shapes of "Documents" in claude/conventions.md, each with the shape
+  of its own README.md ("app", "collection" or "other").
 - "ref": the tag of this repository that every repository uses the shared
   CI workflows (`phosphor-works/workspace/.github/workflows/<name>.yml@<ref>`)
   and the shared hooks (the `ref:` of the lefthook remote) at. tools/sync
@@ -59,6 +65,22 @@ CLAUDE_END = '<!-- END shared -->'
 SECTIONS = ['Overview', 'Layout', 'Build and test', 'Rules', 'Code', 'Skills and agents', 'Other repositories',
             'Where things are']
 REQUIRED_SECTIONS = ['Overview', 'Layout', 'Build and test']
+# The shapes of "Documents" in claude/conventions.md: the ## sections of each
+# kind of page, in order. A name in brackets is optional, and TOPIC is a place
+# for any number of sections of the page's own.
+TOPIC = '*'
+DOCUMENT_SHAPES = {
+    'app': ['Features', 'Install', 'Build', '[Documentation]', 'Contributing', 'License'],
+    'collection': ['Libraries', 'Build', 'Use from an app', 'Contributing', 'License'],
+    'library': ['Responsibility', 'Key types', 'Use', TOPIC, '[Design notes]', 'Dependencies', '[See also]'],
+    'other': ['[Contents]', '[Use]', TOPIC, '[Contributing]', '[License]'],
+    'index': ['Pages'],
+    'page': [TOPIC, '[Limits]', '[Troubleshooting]', '[See also]'],
+}
+# Markdown files that are not documents of the repository: tooling, licenses,
+# generated or published content.
+DOCUMENT_SKIP = re.compile(r'^(\.claude|\.github|LICENSES|templates|plugins|src/content|node_modules)/'
+                           r'|(^|/)(CLAUDE|CHANGELOG|CHANGES|CONTRIBUTING|SKILL)\.md$')
 WORKFLOW_USE = re.compile(r'(phosphor-works/workspace/\.github/workflows/[\w.-]+\.ya?ml)@([\w./-]+)')
 REMOTE_REF = re.compile(r'(git_url: ' + re.escape(REMOTE_URL) + r'\n\s+ref: )(\S+)')
 LEFTHOOK_MINIMAL = f"""# SPDX-FileCopyrightText: 2026 Phosphor Works Team
@@ -224,6 +246,77 @@ def pin_problems(repo, root):
     return problems
 
 
+def document_kind(rel, readme_kind):
+    """The shape of the page at REL, or None when it is not a document."""
+    if DOCUMENT_SKIP.search(rel):
+        return None
+    if rel == 'README.md':
+        return readme_kind
+    if rel.startswith('docs/'):
+        return 'index' if rel.endswith('/README.md') else 'page'
+    if re.fullmatch(r'libs/[^/]+/README\.md', rel):
+        return 'library'
+    if rel.endswith('README.md'):
+        return 'other'
+    return None
+
+
+def shape_problems(headings, shape):
+    """Why the ## HEADINGS do not follow SHAPE, as a list."""
+    names = [s.strip('[]') for s in shape]
+    required = [s for s in shape if s != TOPIC and not s.startswith('[')]
+    problems, at = [], 0  # at: the index in SHAPE that the last heading took
+    for h in headings:
+        if h in names[at:]:
+            at = names.index(h, at)
+            continue
+        topic = shape.index(TOPIC) if TOPIC in shape else -1
+        if topic >= at:
+            at = topic
+            continue
+        if h in names:
+            problems.append(f'has "{h}" out of order or twice')
+        else:
+            problems.append(f'has a section "{h}" that its shape has no place for')
+    missing = [h for h in required if h not in headings]
+    if missing:
+        problems.append('misses the sections ' + ', '.join(f'"{h}"' for h in missing))
+    return problems
+
+
+def document_problems(root, readme_kind):
+    """{path: [problems]} of the READMEs and docs/ pages of the repository at ROOT."""
+    files = subprocess.run(['git', '-C', str(root), 'ls-files', '--cached', '--others', '--exclude-standard', '*.md'],
+                           capture_output=True, text=True, check=True).stdout.split()
+    out = {}
+    for rel in files:
+        kind = document_kind(rel, readme_kind)
+        if kind is None:
+            continue
+        lines = (root / rel).read_text().splitlines()
+        problems = []
+        body = [line for line in lines if not line.startswith('<!-- SPDX-')]
+        if not any(line.startswith('<!-- SPDX-License-Identifier:') for line in lines[:3]):
+            problems.append('does not start with the SPDX lines')
+        text = [line for line in body if line.strip()]
+        if not text or not text[0].startswith('# '):
+            problems.append('does not start with a # title')
+        elif len(text) < 2 or text[1].startswith('#'):
+            problems.append('has no paragraph under its title')
+        headings, fence = [], False
+        for line in body:
+            if line.startswith('```') or line.startswith('~~~'):
+                fence = not fence
+            elif not fence and line.startswith('## '):
+                headings.append(line[3:].strip())
+            elif not fence and line.startswith('# ') and text and line != text[0]:
+                problems.append(f'has a second title: {line.strip()}')
+        problems += shape_problems(headings, DOCUMENT_SHAPES[kind])
+        if problems:
+            out[f'{rel} ({kind})'] = problems
+    return out
+
+
 def lefthook_problem(path):
     """Why PATH does not pull the shared hooks, or None."""
     if not path.exists():
@@ -238,6 +331,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--check', action='store_true', help='report differences, change nothing')
     parser.add_argument('--repo', action='append', help='only this repository')
+    parser.add_argument('--documents', choices=['app', 'collection', 'other'],
+                        help='check the documents of each --repo with this README shape, listed or not')
     args = parser.parse_args()
     repos = args.repo or all_repos()
     unknown = set(repos) - set(all_repos())
@@ -277,6 +372,10 @@ def main():
                     (root / 'CLAUDE.md').write_text(want)
                     written.append(f'{repo}/CLAUDE.md')
         problems += [f'{repo}/cmake: {p}' for p in pin_problems(repo, root)]
+        readme_kind = args.documents or MANIFEST.get('documents', {}).get(repo)
+        if readme_kind:
+            for rel, doc_problems in document_problems(root, readme_kind).items():
+                problems += [f'{repo}/{rel}: {p}' for p in doc_problems]
         for rel, content in pin_refs(root).items():
             if args.check:
                 problems.append(f'{repo}/{rel}: uses the shared workflows or hooks at a ref other than {REF}')
@@ -289,7 +388,7 @@ def main():
     for p in problems:
         print(p)
     if problems:
-        print(f'{len(problems)} problem(s). ' + ('Run tools/sync to fix the copies.' if args.check
+        print(f'{len(problems)} problem(s). ' + ('Run tools/sync to fix the copies, and fix the rest by hand.' if args.check
                                                     else 'Fix these by hand.'))
         return 1
     if args.check:

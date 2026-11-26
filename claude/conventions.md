@@ -98,7 +98,8 @@ All text means every text in a repository and around it:
 
 Text that is not ours keeps its words: code, commands, paths and identifiers, quotations, and the names and messages
 of other projects. A machine check covers user-facing text where a repository has one. Review covers the rest.
-Existing text that breaks a rule is corrected when a change edits it. Do not rewrite unrelated text in bulk.
+Every README and `docs/` page follows these rules and the standard shape in "Documents". When a change edits other
+text that breaks a rule, correct it in the same change.
 
 Sentences and procedures:
 
@@ -122,9 +123,33 @@ Punctuation and style:
 Technical terms can stay when ordinary words would lose precision (for example Luau, QRhi, Wayland, layer-shell,
 shader, pane). Explain a new term at its first use when the reader needs it.
 
-Keep each README to the product's purpose, its main features and links to the documents. Put procedures, API
-details, limits and examples in the linked documents. Do not put audit reports, plans or session summaries in a
-repository.
+## Documents
+
+Every README and every page in `docs/` has one of the shapes below. `tools/sync --check` reports a page whose `##`
+sections are missing, unknown or out of order.
+
+Each page starts with the two SPDX lines as HTML comments, then the `#` title, then one paragraph with no heading.
+For a README, the paragraph says what the product or library is for. For a `docs/` page, it says what the page tells
+and who reads it. Headings use sentence case. A `##` heading names a subject ("Sockets") or, for a procedure, an
+action ("Install a pack").
+
+| Page | Sections, in this order (optional ones in brackets) |
+| --- | --- |
+| App README (an app repository's `README.md`) | `Features`, `Install`, `Build`, [`Documentation`], `Contributing`, `License` |
+| Collection README (a library repository's `README.md`) | `Libraries`, `Build`, `Use from an app`, `Contributing`, `License` |
+| Library README (`libs/<library>/README.md`) | `Responsibility`, `Key types`, `Use`, [topic sections], [`Design notes`], `Dependencies`, [`See also`] |
+| Other README (any other `README.md`: a repository of data or tools, an example, a tool directory) | [`Contents`], [`Use`], [topic sections], [`Contributing`], [`License`] |
+| Documentation index (`docs/README.md`) | `Pages` |
+| `docs/` page (every other page in `docs/`) | topic sections, [`Limits`], [`Troubleshooting`], [`See also`] |
+
+- A README holds the purpose, the main features, the shortest build and install steps, and links. Procedures, API
+  details, limits and examples go in `docs/`.
+- `Libraries` and `Pages` are tables with one row for each library or page and a one-sentence description.
+- `Contributing` links to `CONTRIBUTING.md` where the repository has one. `License` names the license and says
+  where the texts are.
+- Link to a page of the same repository with a relative path, and to another repository with its full GitHub URL.
+- A page tells how the product is now. Do not put plans, audits, status reports, session summaries, dates of work
+  or TODO lists in a repository. Planned work is an issue in the `workspace` repository.
 
 ## Licenses
 

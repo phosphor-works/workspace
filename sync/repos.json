@@ -24,5 +24,6 @@
   },
   "lefthook": "all",
   "claude": "all",
-  "ref": "v1"
+  "documents": {},
+  "ref": "v2"
 }
