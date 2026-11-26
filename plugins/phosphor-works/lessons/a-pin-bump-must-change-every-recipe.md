@@ -9,6 +9,7 @@ added: 2026-11-24
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 An app repeats each pin outside CMake. A bump of branding or phosphor-surface-packs changes
-`cmake/<App>Dependencies.cmake` and the app's packaging: PlasmaZones' `packaging/nix/package.nix`, `arch/PKGBUILD`,
-`rpm/plasmazones.spec` (and `debian/copyright` for branding), and Lambent's `packaging/nix/package.nix`.
-PlasmaZones' dep-pins conventions rule names a recipe that misses the new pin.
+`cmake/<App>Dependencies.cmake` and the app's packaging: PlasmaZones' `nix/package.nix`, and `arch/PKGBUILD`,
+`arch/PKGBUILD.git` and `rpm/plasmazones.spec` (and `debian/copyright` for branding) in `plasmazones/` of the
+packaging repository, on a branch with the same name, and Lambent's `packaging/nix/package.nix`. PlasmaZones'
+dep-pins conventions rule names a recipe that misses the new pin.

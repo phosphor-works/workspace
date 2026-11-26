@@ -35,7 +35,9 @@ sync/repos.json says what goes where:
   Nix, Arch, RPM, Debian and OBS recipes) must be one that a pin names: a pin
   of the repository, or of a phosphor-works repository that it pins, at the
   pinned commit, and so on. A Nix entry's hash must be the SHA-256 of its pin.
-  The check moves to the packaging repository with the recipes.
+  A recipe in the packaging repository belongs to the app that its top
+  directory names (plasmazones/ is PlasmaZones), and is checked against the
+  pins of that app's checkout.
 - "documents": the repositories whose READMEs and docs/ pages --check holds
   to the shapes of "Documents" in claude/conventions.md, each with the shape
   of its own README.md ("app", "collection" or "other").
@@ -280,21 +282,44 @@ def pinned_archives(repo):
     return out
 
 
+PACKAGING = 'packaging'
+
+
+def recipe_owner(repo, rel):
+    """The repository whose pins the recipe @p rel of @p repo must match: @p repo itself, or for a recipe of the
+    packaging repository, the repository that its top directory names, in any case. None when no repository has
+    that name."""
+    if repo != PACKAGING:
+        return repo
+    top = rel.split('/', 1)[0].lower()
+    return next((name for name in all_repos() if name.lower() == top and name != PACKAGING), None)
+
+
 def recipe_problems(repo, root):
     """Each archive that a recipe of @p repo names and no pin names, and each Nix hash that differs from its pin."""
     files = [f for f in subprocess.run(['git', '-C', str(root), 'ls-files'], capture_output=True,
                                        text=True).stdout.split() if RECIPE.search(f)]
-    if not files:
-        return []
-    pinned = pinned_archives(repo)
-    if pinned is None:
-        return []
     problems = []
+    pinned_of = {}
     for rel in files:
+        owner = recipe_owner(repo, rel)
+        if owner is None:
+            problems.append(f'{rel}: is a recipe of no repository, because its top directory names none in workspace.repos')
+            continue
+        if owner not in pinned_of:
+            if owner != repo and not (repo_dir(owner) / '.git').exists():
+                problems.append(f'{rel}: is a recipe of {owner}, which is not cloned, so its pins were not read')
+                pinned_of[owner] = None
+                continue
+            pinned_of[owner] = pinned_archives(owner)
+        pinned = pinned_of[owner]
+        # None: a checkout lacks a pinned commit, which pin_problems reports.
+        if pinned is None:
+            continue
         text = (root / rel).read_text(errors='replace')
         for name in sorted(set(ARCHIVE.findall(text))):
             if name not in pinned:
-                problems.append(f'{rel}: bundles {name}, which no pin of {repo} or of a library it pins names')
+                problems.append(f'{rel}: bundles {name}, which no pin of {owner} or of a library it pins names')
         for name, _, nix_hash in NIX_ENTRY.findall(text):
             if name in pinned and nix_hash != sri(pinned[name]):
                 problems.append(f'{rel}: the hash of {name} is not the SHA-256 of its pin')

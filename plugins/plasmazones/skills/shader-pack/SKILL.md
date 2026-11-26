@@ -47,8 +47,9 @@ uniform name from memory. Schemas: `../phosphor-libs/data/schemas/<family>-metad
 - New PlasmaZones-original shader: `LGPL-2.1-or-later` for animation and pointer; `GPL-3.0-or-later` for overlay. Surface
   packs follow phosphor-surface-packs' own rules (its README and `scripts/check.py`).
 - A port of GPL upstream, or anything including `animations/shared/bmw_compat.glsl`, is `GPL-3.0-or-later` with a second
-  `SPDX-FileCopyrightText` for the upstream author, AND a per-file stanza in `packaging/debian/copyright` after the LGPL
-  `plasmazones/data/animations/*` one (DEP-5 is last-match-wins). A permissive port kept LGPL still needs a stanza
+  `SPDX-FileCopyrightText` for the upstream author, AND a per-file stanza in `plasmazones/debian/copyright` of the
+  packaging repository after the LGPL `plasmazones/data/animations/*` one (DEP-5 is last-match-wins). Make it on a
+  packaging branch with the same name as the PlasmaZones branch. A permissive port kept LGPL still needs a stanza
   crediting its holder. The `dep5` conventions rule fails without it.
 
 ## Changing the contract

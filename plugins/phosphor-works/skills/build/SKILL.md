@@ -150,7 +150,8 @@ not build as unity, so this gate does not apply to it. A repository with no
 - To build against a library change before the pin moves, use the `workspace` superbuild, or pass
   `-DCPM_<library>_SOURCE=<checkout>` to one build dir.
 - Move a pin after the library change merges: VERSION, URL, FILE and SHA256 together, with the hash of the
-  downloaded archive. Repeat it in `packaging/nix/package.nix` where the repository has one.
+  downloaded archive. Repeat it in the Nix recipe where the repository has one (`nix/package.nix` in PlasmaZones,
+  `packaging/nix/package.nix` in Lambent), and in the app's recipes in the packaging repository.
 - Never edit a checkout that a build dir compiles from. A library change goes through that library's branch and
   pull request.
 
