@@ -56,6 +56,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: workspace
+          fetch-depth: 2
 
       # The manifest names SSH URLs for developers. CI clones over HTTPS.
       # vcstool imports pkg_resources, which setuptools 81 removed.
@@ -70,6 +71,7 @@ jobs:
           /opt/vcstool/bin/vcs import --skip-existing --input workspace.repos ..
 
       - name: Check out the change set
+        id: set
         if: inputs.change_set != '' || github.event_name == 'pull_request'
         env:
           CHANGE_SET: ${{ inputs.change_set || github.head_ref }}
@@ -90,8 +92,33 @@ jobs:
               fi
               git -C "$dir" checkout --quiet -B "$CHANGE_SET" FETCH_HEAD
               echo "$repo: $CHANGE_SET"
+              echo "other=true" >> "$GITHUB_OUTPUT"
             fi
           done
+
+      # A pull request that changes only the shared-file tooling (tools/sync
+      # and sync/), with no branch of its change set in another repo, builds
+      # nothing: the check below is all that it can change. A pull request is
+      # checked out as its merge commit, whose first parent is the base.
+      - name: Build or not
+        id: build
+        env:
+          EVENT: ${{ github.event_name }}
+          OTHER: ${{ steps.set.outputs.other }}
+        run: |
+          set -euo pipefail
+          build=true
+          if [ "$EVENT" = pull_request ] && [ "$OTHER" != true ]; then
+            build=false
+            while IFS= read -r file; do
+              case "$file" in
+                tools/sync|sync/*) ;;
+                *) build=true ;;
+              esac
+            done < <(git diff --name-only HEAD^1 HEAD)
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "build: $build"
 
       # Every repository holds the same shared files (.clang-format,
       # .editorconfig, CMakePresets.json, the lefthook remote).
@@ -102,6 +129,7 @@ jobs:
         run: tools/snapshot > ../snapshot.repos && cat ../snapshot.repos
 
       - name: Install packages
+        if: steps.build.outputs.build == 'true'
         run: |
           set -euo pipefail
           mapfile -t packages < <(cat ../*/.github/ci/arch-packages.txt \
@@ -113,6 +141,7 @@ jobs:
           done
 
       - name: Restore the dependency archives
+        if: steps.build.outputs.build == 'true'
         uses: actions/cache@v5
         with:
           path: workspace/.cache/cpm
@@ -120,6 +149,7 @@ jobs:
           restore-keys: cpm-
 
       - name: Set up the compiler cache
+        if: steps.build.outputs.build == 'true'
         run: |
           {
             echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache"
@@ -131,6 +161,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Restore the compiler cache
+        if: steps.build.outputs.build == 'true'
         uses: actions/cache@v5
         with:
           path: .ccache
@@ -141,24 +172,27 @@ jobs:
       # The scripting tests hold handlers to CPU-time limits, and at -O0 on a
       # shared runner they pass them (Afterglow's 20 ms on_* limit).
       - name: Configure
+        if: steps.build.outputs.build == 'true'
         run: cmake --preset relwithdebinfo
 
       # The presets cap jobs at 3 for 16 GB machines. The runner has 4 cores.
       - name: Build
+        if: steps.build.outputs.build == 'true'
         run: cmake --build --preset relwithdebinfo -j "$(nproc)"
 
       - name: Test
+        if: steps.build.outputs.build == 'true'
         env:
           QT_QPA_PLATFORM: offscreen
         run: ctest --preset relwithdebinfo -j "$(nproc)"
 
       - name: Compiler cache statistics
-        if: always()
+        if: (always()) && steps.build.outputs.build == 'true'
         run: ccache --show-stats || true
 
       # `vcs import --input snapshot.repos` reproduces the failing tree.
       - name: Upload the snapshot
-        if: failure()
+        if: (failure()) && steps.build.outputs.build == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: snapshot
