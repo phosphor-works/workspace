@@ -162,8 +162,9 @@ the repository must pin the same commit of that third repository, because the fi
 library was tested with its own pin. The check reads the pins of the library at the pinned commit from its sibling
 checkout. It reports each difference. Fix a difference with a pin bump in the repository.
 
-It also checks the recipes: the Nix, Arch, RPM, Debian and OBS files of each repository. Each archive that a recipe
-names must be one that a pin names, in the repository or in a library that it pins. Each Nix hash must be the SHA-256
+It also checks the recipes: the Nix, Arch, RPM, Debian and OBS files of each repository. A recipe in the `packaging`
+repository belongs to the app that its top directory names (`plasmazones/` is PlasmaZones). Each archive that a recipe
+names must be one that a pin names, in the app or in a library that it pins. Each Nix hash must be the SHA-256
 of its pin. A recipe that keeps an archive of an old pin then fails the check, not a later Nix build.
 
 The git hooks that all repositories share are in `lefthook/common.yml`. They run clang-format and qmlformat on the
