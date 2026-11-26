@@ -26,6 +26,12 @@ of order.
   recipe of the app. `-DCPM_<library>_SOURCE=<dir>` builds an app against a local checkout before the pin moves.
   An app pins phosphor-libs at the commit that each library it builds pins, because the app's pin wins in the
   build. `workspace/tools/sync --check` reports two pins that differ.
+- Each library repository has its own version, in `project()` of its `CMakeLists.txt` and in a `vX.Y.Z` tag, after
+  [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the major version is 0, a change that breaks the
+  API or the ABI increases the minor version, and any other release increases the patch version. Each library
+  repository records its releases in `CHANGELOG.md`: a pull request that changes what the library does adds a line
+  under `Unreleased`. To release, move `Unreleased` to the new version, set `project()` to it, and tag that commit
+  on `main`. The `packaging` repository packages each tag. The apps still pin a commit, normally a tagged one.
 - When the superbuild or the shared tooling finds a problem in one repository, fix it in that repository. Do not add
   a workaround to `workspace`.
 - The Claude skills, agents and guard come from the plugins in `workspace/plugins/`. Change them in the `workspace`
