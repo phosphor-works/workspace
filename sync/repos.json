@@ -34,7 +34,9 @@
     "Afterglow": "app",
     "phosphor-libs": "collection",
     "phosphor-engine-libs": "collection",
-    "phosphor-components": "collection"
+    "phosphor-components": "collection",
+    "phosphor-shell-libs": "collection",
+    "Lambent": "app"
   },
   "ref": "v1"
 }
