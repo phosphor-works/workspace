@@ -31,6 +31,11 @@ sync/repos.json says what goes where:
   repository too must pin the same commit of that one: the first pin wins in
   the build, and the library was tested with its own. --check reads the
   library's pins at the pinned commit from its sibling checkout.
+- Recipes: each archive that a recipe of a repository names (flake.nix, the
+  Nix, Arch, RPM, Debian and OBS recipes) must be one that a pin names: a pin
+  of the repository, or of a phosphor-works repository that it pins, at the
+  pinned commit, and so on. A Nix entry's hash must be the SHA-256 of its pin.
+  The check moves to the packaging repository with the recipes.
 - "documents": the repositories whose READMEs and docs/ pages --check holds
   to the shapes of "Documents" in claude/conventions.md, each with the shape
   of its own README.md ("app", "collection" or "other").
@@ -44,6 +49,7 @@ repository. A repository never edits these files itself.
 """
 
 import argparse
+import base64
 import json
 import re
 import subprocess
@@ -218,6 +224,83 @@ def pins_of(text):
     return dict(PIN.findall(text))
 
 
+ARCHIVE_PIN = re.compile(r'set\(\w+_DEP_([\w.-]+)_(VERSION|FILE|SHA256) "([^"]+)"\)')
+RECIPE = re.compile(r'(^|/)(flake\.nix|nix/[^/]+\.nix|PKGBUILD[^/]*|[^/]+\.spec|debian/[^/]+|obs/[^/]+)$')
+ARCHIVE = re.compile(r'[A-Za-z][\w.+-]*?-(?:[0-9a-f]{40}|v?\d[\w.]*?)\.tar\.gz')
+NIX_ENTRY = re.compile(r'name = "([^"]+\.tar\.gz)";(.*?)hash = "(sha256-[^"]+)"', re.S)
+
+
+def sri(sha256):
+    """The Nix SRI form of a hex SHA-256."""
+    return 'sha256-' + base64.b64encode(bytes.fromhex(sha256)).decode()
+
+
+def archive_pins(repo, rev=None):
+    """{name: {VERSION, FILE, SHA256}} of the pin file of @p repo, in its checkout or at commit @p rev. None when
+    the checkout does not have @p rev."""
+    root = repo_dir(repo)
+    listing = subprocess.run(['git', '-C', str(root), 'ls-tree', '--name-only', rev or 'HEAD', 'cmake/'],
+                             capture_output=True, text=True)
+    if listing.returncode != 0:
+        return None
+    listed = listing.stdout.split()
+    names = [n for n in listed if n.endswith('Dependencies.cmake')]
+    if not names:
+        return {}
+    if rev is None:
+        text = (root / names[0]).read_text()
+    else:
+        text = subprocess.run(['git', '-C', str(root), 'show', f'{rev}:{names[0]}'], capture_output=True,
+                              text=True).stdout
+    out = {}
+    for name, key, value in ARCHIVE_PIN.findall(text):
+        out.setdefault(name, {})[key] = value
+    return out
+
+
+def pinned_archives(repo):
+    """{file name: sha256} of each archive that a pin names: of @p repo, and of each phosphor-works repository it
+    pins, at the pinned commit, and so on. None when a checkout does not have a pinned commit: pin_problems
+    reports that."""
+    out, seen, todo = {}, set(), [(repo, None)]
+    while todo:
+        name, rev = todo.pop()
+        if (name, rev) in seen:
+            continue
+        seen.add((name, rev))
+        pins = archive_pins(name, rev)
+        if pins is None:
+            return None
+        for dep, pin in pins.items():
+            if 'FILE' in pin and 'SHA256' in pin:
+                out[pin['FILE']] = pin['SHA256']
+            if dep in all_repos() and (repo_dir(dep) / '.git').exists() and \
+                    re.fullmatch(r'[0-9a-f]{40}', pin.get('VERSION', '')):
+                todo.append((dep, pin['VERSION']))
+    return out
+
+
+def recipe_problems(repo, root):
+    """Each archive that a recipe of @p repo names and no pin names, and each Nix hash that differs from its pin."""
+    files = [f for f in subprocess.run(['git', '-C', str(root), 'ls-files'], capture_output=True,
+                                       text=True).stdout.split() if RECIPE.search(f)]
+    if not files:
+        return []
+    pinned = pinned_archives(repo)
+    if pinned is None:
+        return []
+    problems = []
+    for rel in files:
+        text = (root / rel).read_text(errors='replace')
+        for name in sorted(set(ARCHIVE.findall(text))):
+            if name not in pinned:
+                problems.append(f'{rel}: bundles {name}, which no pin of {repo} or of a library it pins names')
+        for name, _, nix_hash in NIX_ENTRY.findall(text):
+            if name in pinned and nix_hash != sri(pinned[name]):
+                problems.append(f'{rel}: the hash of {name} is not the SHA-256 of its pin')
+    return problems
+
+
 def pin_problems(repo, root):
     """Each pin of @p repo that differs from the pin of the same repository in a library it pins."""
     files = sorted((root / 'cmake').glob('*Dependencies.cmake'))
@@ -372,6 +455,7 @@ def main():
                     (root / 'CLAUDE.md').write_text(want)
                     written.append(f'{repo}/CLAUDE.md')
         problems += [f'{repo}/cmake: {p}' for p in pin_problems(repo, root)]
+        problems += [f'{repo}/{p}' for p in recipe_problems(repo, root)]
         readme_kind = args.documents or MANIFEST.get('documents', {}).get(repo)
         if readme_kind:
             for rel, doc_problems in document_problems(root, readme_kind).items():
