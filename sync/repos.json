@@ -24,6 +24,19 @@
   },
   "lefthook": "all",
   "claude": "all",
-  "documents": {},
+  "documents": {
+    "workspace": "other",
+    "branding": "other",
+    "website": "other",
+    "phosphor-surface-packs": "other",
+    "phosphor-bots": "app",
+    "PlasmaZones": "app",
+    "Afterglow": "app",
+    "phosphor-libs": "collection",
+    "phosphor-engine-libs": "collection",
+    "phosphor-components": "collection",
+    "phosphor-shell-libs": "collection",
+    "Lambent": "app"
+  },
   "ref": "v2"
 }
