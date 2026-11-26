@@ -24,6 +24,8 @@ of order.
   the set (`status`). Merge the libraries first. Then move the app's pin to the merged commit: its VERSION, URL,
   FILE and SHA256 together in `cmake/<Project>Dependencies.cmake`, and the same archive in each Nix or packaging
   recipe of the app. `-DCPM_<library>_SOURCE=<dir>` builds an app against a local checkout before the pin moves.
+  An app pins phosphor-libs at the commit that each library it builds pins, because the app's pin wins in the
+  build. `workspace/tools/sync --check` reports two pins that differ.
 - When the superbuild or the shared tooling finds a problem in one repository, fix it in that repository. Do not add
   a workaround to `workspace`.
 - The Claude skills, agents and guard come from the plugins in `workspace/plugins/`. Change them in the `workspace`

@@ -35,7 +35,7 @@ development only. `packaging` owns releases, rebuild watching and CI images, and
 | `LICENSES/` | The license texts (REUSE): `GPL-3.0-or-later` for this repo's code, `CC0-1.0` for its configuration, and `LGPL-2.1-or-later`, which `tools/new-repo` copies into a library repository with the other two |
 | `tools/new-repo`, `templates/` | A new library repository or program, generated from the templates with every convention, and registered here (`phosphor-works:new-repo`) |
 | `tools/change` | Change sets: the branch in each repo, the linked pull requests, the status of the set, the superbuild of the set |
-| `tools/sync`, `sync/` | The files every repo holds the same (`.clang-format`, `.editorconfig`, the generated `CMakePresets.json`, the shared block of each CLAUDE.md from `sync/claude-header.md`), the check that each repo's `lefthook.yml` pulls the shared hooks, and the workspace tag (`ref`) that every repo uses the shared CI and hooks at. `tools/sync --check` reports drift, nightly too |
+| `tools/sync`, `sync/` | The files every repo holds the same (`.clang-format`, `.editorconfig`, the generated `CMakePresets.json`, the shared block of each CLAUDE.md from `sync/claude-header.md`), the check that each repo's `lefthook.yml` pulls the shared hooks, the workspace tag (`ref`) that every repo uses the shared CI and hooks at, and the check that a repo pins the same commits as the libraries it pins. `tools/sync --check` reports drift, nightly too |
 | `lefthook/common.yml` | The shared git hooks: clang-format, qmlformat, the Conventional Commits check |
 | `claude/conventions.md` | The rules every repo's CLAUDE.md imports |
 | `.claude-plugin/marketplace.json`, `plugins/` | The Claude Code plugins: `phosphor-works` (shared) and one per app |

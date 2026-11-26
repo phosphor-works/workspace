@@ -157,6 +157,11 @@ its BEGIN and END markers. The remaining part of the file belongs to the reposit
 their order (`SECTIONS` in `tools/sync`). `--check` reports a section that is missing, unknown or in the wrong
 position.
 
+`tools/sync --check` also compares the pins. A repository can pin a library that pins a third repository too. Then
+the repository must pin the same commit of that third repository, because the first pin wins in the build, and the
+library was tested with its own pin. The check reads the pins of the library at the pinned commit from its sibling
+checkout. It reports each difference. Fix a difference with a pin bump in the repository.
+
 The git hooks that all repositories share are in `lefthook/common.yml`. They run clang-format and qmlformat on the
 staged files, and the Conventional Commits check. The `lefthook.yml` of each repository pulls them through
 `remotes:` and adds only its own commands. `tools/setup` runs `lefthook install` in each repository.
