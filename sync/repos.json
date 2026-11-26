@@ -30,7 +30,11 @@
     "website": "other",
     "phosphor-surface-packs": "other",
     "phosphor-bots": "app",
-    "PlasmaZones": "app"
+    "PlasmaZones": "app",
+    "Afterglow": "app",
+    "phosphor-libs": "collection",
+    "phosphor-engine-libs": "collection",
+    "phosphor-components": "collection"
   },
   "ref": "v1"
 }
