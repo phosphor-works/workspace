@@ -21,7 +21,8 @@
 #     With `variant-configure-args`, one more Arch job configures with those
 #     arguments, for a build option that changes what is compiled. With
 #     `test-display`, the tests run under xvfb-run with Mesa's software
-#     renderer. Each test run gets a private XDG_RUNTIME_DIR.
+#     renderer. Each test run gets a private XDG_RUNTIME_DIR. With `ci-images`
+#     the jobs run in the suite's CI images from the packaging repository.
 #   * Lint: clang-format and qmlformat over every tracked C++ and QML file.
 #   * Nix, where the repository has a flake: `nix flake check` (the package
 #     with its tests in the sandbox), the package, `nix-verify` on the
@@ -91,6 +92,13 @@ on:
         description: The name of that job, in "Arch (<name>)".
         type: string
         default: variant
+      ci-images:
+        description: >-
+          Run the Arch, Fedora and lint jobs in the suite's CI images (ghcr.io/phosphor-works/ci-arch and ci-fedora,
+          built by the packaging repository), which hold every repository's packages. The job still installs the
+          repository's own list.
+        type: boolean
+        default: false
       test-display:
         description: >-
           Run the tests under xvfb-run with Mesa's software renderer, for tests that need a real surface. The
@@ -154,7 +162,10 @@ jobs:
       matrix:
         distro: ${{ fromJSON(format('["arch"{0}{1}{2}]', inputs.clang && ', "arch-clang"' || '', inputs.fedora && ', "fedora"' || '', inputs.variant-configure-args != '' && ', "arch-variant"' || '')) }}
     container:
-      image: ${{ matrix.distro == 'fedora' && format('fedora:{0}', inputs.fedora-version) || 'archlinux:latest' }}
+      image: >-
+        ${{ inputs.ci-images
+            && (matrix.distro == 'fedora' && format('ghcr.io/phosphor-works/ci-fedora:{0}', inputs.fedora-version) || 'ghcr.io/phosphor-works/ci-arch:latest')
+            || (matrix.distro == 'fedora' && format('fedora:{0}', inputs.fedora-version) || 'archlinux:latest') }}
     env:
       PRESET: ${{ inputs.preset }}
       INSTALL: ${{ matrix.distro == 'fedora' && 'dnf install -y' || 'pacman -S --noconfirm --needed' }}
@@ -296,7 +307,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: archlinux:latest
+      image: ${{ inputs.ci-images && 'ghcr.io/phosphor-works/ci-arch:latest' || 'archlinux:latest' }}
     steps:
       - name: Bootstrap git
         run: pacman -Syu --noconfirm --needed git
