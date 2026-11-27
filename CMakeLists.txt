@@ -25,12 +25,9 @@ endif()
 
 get_filename_component(WORKSPACE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
-# ctest from the build root reaches a test only through a CTestTestfile chain
-# that starts here, so testing is enabled at this level, before any app.
-option(BUILD_TESTING "Build every repo's test suite" OFF)
-if(BUILD_TESTING)
-    enable_testing()
-endif()
+# No tests: each repository builds and runs its own tests in its own build.
+# A normal variable, so that no app's or library's option() turns them on.
+set(BUILD_TESTING OFF)
 
 # One CPM download cache for the whole tree (third-party archives, branding).
 if(NOT DEFINED CPM_SOURCE_CACHE AND NOT DEFINED ENV{CPM_SOURCE_CACHE})

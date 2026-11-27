@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # The superbuild of every repo's main, nightly, on Arch. It catches API breaks
-# between repos before a release. The packaging nightly checks the installed
+# between repos before a release. It builds no tests: each repo runs its own in
+# its own CI. The packaging nightly checks the installed
 # side (Config files, install rules), which an in-tree build cannot see.
 #
 # A change that spans repos is a change set: one branch name in each repo it
@@ -65,8 +66,8 @@ jobs:
           set -euo pipefail
           python -m venv /opt/vcstool
           /opt/vcstool/bin/pip install --quiet --no-cache-dir vcstool 'setuptools<81'
-          # Not on PATH: CMake would find the virtualenv's python, which has
-          # none of the system Python modules the tests use (python-dbus).
+          # Not on PATH: CMake would find the virtualenv's python instead of
+          # the system's.
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           /opt/vcstool/bin/vcs import --skip-existing --input workspace.repos ..
 
@@ -162,7 +163,7 @@ jobs:
             echo "CCACHE_MAXSIZE=5G"
           } >> "$GITHUB_ENV"
 
-      # Saved right after the build, also when the build or the tests fail:
+      # Saved right after the build, also when the build fails:
       # what compiled is still good, and a run that saved nothing made the
       # next run start cold.
       - name: Restore the compiler cache
@@ -175,10 +176,7 @@ jobs:
           restore-keys: ccache-superbuild-relwithdebinfo-
 
       # Optimized with debug info, as each app's own CI and the packages build.
-      # The scripting tests hold handlers to CPU-time limits, and at -O0 on a
-      # shared runner they pass them (Afterglow's 20 ms on_* limit).
-      # mold links much faster than ld.bfd, and the tree has hundreds of test
-      # programs.
+      # mold links much faster than ld.bfd.
       - name: Configure
         if: steps.build.outputs.build == 'true'
         run: cmake --preset relwithdebinfo -DCMAKE_LINKER_TYPE=MOLD
@@ -195,12 +193,6 @@ jobs:
         with:
           path: .ccache
           key: ccache-superbuild-relwithdebinfo-${{ github.run_id }}
-
-      - name: Test
-        if: steps.build.outputs.build == 'true'
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: ctest --preset relwithdebinfo -j "$(nproc)"
 
       - name: Compiler cache statistics
         if: (always()) && steps.build.outputs.build == 'true'

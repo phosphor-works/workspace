@@ -39,10 +39,9 @@ tools/snapshot > snap.repos        # the exact commit of every repo
 ## Build
 
 ```sh
-cmake --workflow --preset dev      # configure, build and test everything into build/
+cmake --workflow --preset dev      # configure and build everything into build/
 cmake --preset dev                 # or one step at a time
 cmake --build --preset dev
-ctest --preset dev
 ```
 
 To build one app alone against the sibling library checkouts, in its own build tree:
@@ -62,8 +61,9 @@ Each of these presets has an ASan and UBSan twin: `plasmazones-asan`, `lambent-a
 | `relwithdebinfo` | Release with debug information |
 | `asan` | ASan and UBSan |
 
-Each preset builds the tests. Builds and tests run 3 jobs at a time. To change that, give `-j`. On a 16 GB machine,
-run one build at a time, in a memory limit. Then systemd-oomd cannot stop your session together with the build:
+The superbuild builds no tests. Each repository runs its own tests in its own build. Builds run 3 jobs at a time. To
+change that, give `-j`. On a 16 GB machine, run one build at a time, in a memory limit. Then systemd-oomd cannot stop
+your session together with the build:
 
 ```sh
 systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 cmake --workflow --preset dev

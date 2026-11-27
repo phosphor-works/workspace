@@ -16,6 +16,8 @@ of order.
 
 - Every repository is a sibling checkout under one folder. The `workspace` repository clones them with
   `vcs import --skip-existing --input workspace.repos ..`.
+- Each repository builds and runs only its own tests, in its own build. An app never builds the tests of a library
+  that it adds, and the `workspace` superbuild builds no tests.
 - The `workspace` superbuild builds the libraries and the apps in one tree. Use it to change a library and an app
   together: `cmake --workflow --preset dev` builds everything, and `--preset plasmazones`, `lambent` or `afterglow`
   builds one app against the sibling libraries. Each preset has an `-asan` twin.

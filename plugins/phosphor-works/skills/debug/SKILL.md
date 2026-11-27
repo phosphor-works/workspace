@@ -71,8 +71,8 @@ coredumpctl list --since today
 coredumpctl debug PID --debugger-arguments="-q -batch -ex 'thread apply all bt'"
 ```
 
-A memory error that does not crash every time: build the repository's ASan and UBSan tree (an `asan` preset of the
-`workspace` superbuild, or the app's own sanitizer preset, see `phosphor-works:build`) and run the test there. ASan
+A memory error that does not crash every time: build the repository's ASan and UBSan tree (its own `asan` preset, see
+`phosphor-works:build`) and run the test there. ASan
 names the write and the allocation.
 
 When `command -v rr` finds `rr`, record the test until a run fails, then replay that run backwards from the crash:
