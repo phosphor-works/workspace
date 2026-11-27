@@ -134,6 +134,8 @@ jobs:
           set -euo pipefail
           mapfile -t packages < <(cat ../*/.github/ci/arch-packages.txt \
             | sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' | sort -u)
+          # mold, the linker of the build (see Configure).
+          packages+=(mold)
           for try in 1 2 3; do
             pacman -S --noconfirm --needed "${packages[@]}" && exit 0
             [ "$try" = 3 ] && exit 1
@@ -160,9 +162,13 @@ jobs:
             echo "CCACHE_MAXSIZE=5G"
           } >> "$GITHUB_ENV"
 
+      # Saved right after the build, also when the build or the tests fail:
+      # what compiled is still good, and a run that saved nothing made the
+      # next run start cold.
       - name: Restore the compiler cache
+        id: ccache-restore
         if: steps.build.outputs.build == 'true'
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: .ccache
           key: ccache-superbuild-relwithdebinfo-${{ github.run_id }}
@@ -171,14 +177,24 @@ jobs:
       # Optimized with debug info, as each app's own CI and the packages build.
       # The scripting tests hold handlers to CPU-time limits, and at -O0 on a
       # shared runner they pass them (Afterglow's 20 ms on_* limit).
+      # mold links much faster than ld.bfd, and the tree has hundreds of test
+      # programs.
       - name: Configure
         if: steps.build.outputs.build == 'true'
-        run: cmake --preset relwithdebinfo
+        run: cmake --preset relwithdebinfo -DCMAKE_LINKER_TYPE=MOLD
 
       # The presets cap jobs at 3 for 16 GB machines. The runner has 4 cores.
       - name: Build
         if: steps.build.outputs.build == 'true'
         run: cmake --build --preset relwithdebinfo -j "$(nproc)"
+
+      # always(): a job that its time limit cancels saves what it compiled too.
+      - name: Save the compiler cache
+        if: always() && steps.ccache-restore.outcome == 'success'
+        uses: actions/cache/save@v5
+        with:
+          path: .ccache
+          key: ccache-superbuild-relwithdebinfo-${{ github.run_id }}
 
       - name: Test
         if: steps.build.outputs.build == 'true'
