@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Probes of what the GitHub-hosted runners can do, for CI that is not written
+# yet. Run them by hand, or with a pull request that changes a probe.
+#
+#   * lavapipe dma-buf: the Phosphor compositor tests its import of client
+#     dma-bufs on lavapipe (issue #66). lavapipe gives
+#     VK_EXT_image_drm_format_modifier only when it can open /dev/udmabuf.
+#     The job reports whether the runner has /dev/udmabuf, loads the module
+#     when it is missing, and runs tools/probes/lavapipe-dmabuf.c in an Arch
+#     container that gets the device, with the validation layer. A
+#     validation message fails the job.
+
+name: Probes
+
+on:
+  pull_request:
+    paths: ["tools/probes/**", ".github/workflows/probes.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lavapipe-dmabuf:
+    name: lavapipe dma-buf import
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: /dev/udmabuf on the runner
+        run: |
+          echo "Kernel: $(uname -r)"
+          grep -h CONFIG_UDMABUF "/boot/config-$(uname -r)" || echo "No kernel config in /boot"
+          if [ -e /dev/udmabuf ]; then
+            echo "::notice::/dev/udmabuf is present at job start"
+          else
+            echo "::warning::/dev/udmabuf is missing at job start, loading the module"
+            sudo modprobe udmabuf
+          fi
+          ls -l /dev/udmabuf
+
+      - name: Probe in an Arch container
+        run: |
+          docker run --rm --device /dev/udmabuf -v "$PWD/tools/probes:/probes:ro" archlinux:latest bash -euo pipefail -c '
+            pacman -Syu --noconfirm --needed gcc libdrm vulkan-headers vulkan-icd-loader vulkan-swrast vulkan-validation-layers >/dev/null
+            pacman -Q mesa vulkan-swrast
+            gcc -O1 -Wall -Wextra -Werror -I/usr/include/libdrm -o /tmp/probe /probes/lavapipe-dmabuf.c -lvulkan
+            VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.json VK_LOADER_LAYERS_ENABLE="*validation" /tmp/probe 2>&1 | tee /tmp/out
+            if grep -q "Validation" /tmp/out; then echo "The validation layer reported a message"; exit 1; fi
+          '
