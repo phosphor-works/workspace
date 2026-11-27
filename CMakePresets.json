@@ -8,7 +8,6 @@
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build-${presetName}",
             "cacheVariables": {
-                "BUILD_TESTING": "ON",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
@@ -24,26 +23,26 @@
         },
         {
             "name": "dev",
-            "displayName": "Everything: Debug, with tests",
+            "displayName": "Everything: Debug",
             "inherits": "base",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
         },
         {
             "name": "release",
-            "displayName": "Everything: Release, with tests",
+            "displayName": "Everything: Release",
             "inherits": "base",
             "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
         },
         {
             "name": "relwithdebinfo",
-            "displayName": "Everything: RelWithDebInfo, with tests",
+            "displayName": "Everything: RelWithDebInfo",
             "inherits": "base",
             "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
         },
         {
             "name": "asan",
-            "displayName": "Everything: ASan and UBSan, with tests",
+            "displayName": "Everything: ASan and UBSan",
             "inherits": ["base", "sanitizers"]
         },
         {
@@ -61,35 +60,35 @@
         },
         {
             "name": "plasmazones",
-            "displayName": "PlasmaZones alone, against the sibling libraries: Debug, with tests",
+            "displayName": "PlasmaZones alone, against the sibling libraries: Debug",
             "inherits": "one-app",
             "cacheVariables": { "WORKSPACE_BUILD_PlasmaZones": "ON" }
         },
         {
             "name": "plasmazones-asan",
-            "displayName": "PlasmaZones alone: ASan and UBSan, with tests",
+            "displayName": "PlasmaZones alone: ASan and UBSan",
             "inherits": ["plasmazones", "sanitizers"]
         },
         {
             "name": "lambent",
-            "displayName": "Lambent alone, against the sibling libraries: Debug, with tests",
+            "displayName": "Lambent alone, against the sibling libraries: Debug",
             "inherits": "one-app",
             "cacheVariables": { "WORKSPACE_BUILD_Lambent": "ON" }
         },
         {
             "name": "lambent-asan",
-            "displayName": "Lambent alone: ASan and UBSan, with tests",
+            "displayName": "Lambent alone: ASan and UBSan",
             "inherits": ["lambent", "sanitizers"]
         },
         {
             "name": "afterglow",
-            "displayName": "Afterglow alone, against the sibling phosphor-libs: Debug, with tests",
+            "displayName": "Afterglow alone, against the sibling phosphor-libs: Debug",
             "inherits": "one-app",
             "cacheVariables": { "WORKSPACE_BUILD_Afterglow": "ON" }
         },
         {
             "name": "afterglow-asan",
-            "displayName": "Afterglow alone: ASan and UBSan, with tests",
+            "displayName": "Afterglow alone: ASan and UBSan",
             "inherits": ["afterglow", "sanitizers"]
         }
     ],
@@ -106,95 +105,68 @@
         { "name": "afterglow", "inherits": "base", "configurePreset": "afterglow" },
         { "name": "afterglow-asan", "inherits": "base", "configurePreset": "afterglow-asan" }
     ],
-    "testPresets": [
-        {
-            "name": "base",
-            "hidden": true,
-            "output": { "outputOnFailure": true },
-            "execution": { "noTestsAction": "error", "jobs": 3 }
-        },
-        { "name": "dev", "inherits": "base", "configurePreset": "dev" },
-        { "name": "release", "inherits": "base", "configurePreset": "release" },
-        { "name": "relwithdebinfo", "inherits": "base", "configurePreset": "relwithdebinfo" },
-        { "name": "asan", "inherits": "base", "configurePreset": "asan" },
-        { "name": "plasmazones", "inherits": "base", "configurePreset": "plasmazones" },
-        { "name": "plasmazones-asan", "inherits": "base", "configurePreset": "plasmazones-asan" },
-        { "name": "lambent", "inherits": "base", "configurePreset": "lambent" },
-        { "name": "lambent-asan", "inherits": "base", "configurePreset": "lambent-asan" },
-        { "name": "afterglow", "inherits": "base", "configurePreset": "afterglow" },
-        { "name": "afterglow-asan", "inherits": "base", "configurePreset": "afterglow-asan" }
-    ],
     "workflowPresets": [
         {
             "name": "dev",
             "steps": [
                 { "type": "configure", "name": "dev" },
-                { "type": "build", "name": "dev" },
-                { "type": "test", "name": "dev" }
+                { "type": "build", "name": "dev" }
             ]
         },
         {
             "name": "release",
             "steps": [
                 { "type": "configure", "name": "release" },
-                { "type": "build", "name": "release" },
-                { "type": "test", "name": "release" }
+                { "type": "build", "name": "release" }
             ]
         },
         {
             "name": "asan",
             "steps": [
                 { "type": "configure", "name": "asan" },
-                { "type": "build", "name": "asan" },
-                { "type": "test", "name": "asan" }
+                { "type": "build", "name": "asan" }
             ]
         },
         {
             "name": "plasmazones",
             "steps": [
                 { "type": "configure", "name": "plasmazones" },
-                { "type": "build", "name": "plasmazones" },
-                { "type": "test", "name": "plasmazones" }
+                { "type": "build", "name": "plasmazones" }
             ]
         },
         {
             "name": "plasmazones-asan",
             "steps": [
                 { "type": "configure", "name": "plasmazones-asan" },
-                { "type": "build", "name": "plasmazones-asan" },
-                { "type": "test", "name": "plasmazones-asan" }
+                { "type": "build", "name": "plasmazones-asan" }
             ]
         },
         {
             "name": "lambent",
             "steps": [
                 { "type": "configure", "name": "lambent" },
-                { "type": "build", "name": "lambent" },
-                { "type": "test", "name": "lambent" }
+                { "type": "build", "name": "lambent" }
             ]
         },
         {
             "name": "lambent-asan",
             "steps": [
                 { "type": "configure", "name": "lambent-asan" },
-                { "type": "build", "name": "lambent-asan" },
-                { "type": "test", "name": "lambent-asan" }
+                { "type": "build", "name": "lambent-asan" }
             ]
         },
         {
             "name": "afterglow",
             "steps": [
                 { "type": "configure", "name": "afterglow" },
-                { "type": "build", "name": "afterglow" },
-                { "type": "test", "name": "afterglow" }
+                { "type": "build", "name": "afterglow" }
             ]
         },
         {
             "name": "afterglow-asan",
             "steps": [
                 { "type": "configure", "name": "afterglow-asan" },
-                { "type": "build", "name": "afterglow-asan" },
-                { "type": "test", "name": "afterglow-asan" }
+                { "type": "build", "name": "afterglow-asan" }
             ]
         }
     ]

@@ -49,10 +49,11 @@ development only. `packaging` owns releases, rebuild watching and CI images, and
 
 - It points each library's CPM package at the sibling checkout and adds the apps. The first app that asks for a
   library adds it. Five "version overridden" warnings from CPM are expected.
-- This file and `CMakeLists.txt` hold only what exists because several repos share one tree (testing at the root,
-  one set of install directories).
-- Check a change with a build and the tests, not a configure alone: `cmake --workflow --preset dev`. The nightly CI
-  builds `relwithdebinfo`, as the apps' own CI does.
+- This file and `CMakeLists.txt` hold only what exists because several repos share one tree (no tests, one set of
+  install directories).
+- Check a change with a build, not a configure alone: `cmake --workflow --preset dev`. It builds no tests. Run the
+  tests of each repository that the change touches in that repository's own build. The nightly CI builds
+  `relwithdebinfo`, as the apps' own CI does.
 
 ### The plugins
 

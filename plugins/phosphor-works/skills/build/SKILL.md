@@ -25,7 +25,7 @@ Use a preset. A preset turns on `BUILD_TESTING` and picks the generator (Ninja) 
 | Repository | Configure presets | Build dir | Notes |
 | --- | --- | --- | --- |
 | Every C++ repository: PlasmaZones, Afterglow, Lambent, phosphor-libs, phosphor-engine-libs, phosphor-shell-libs, phosphor-components, phosphor-bots | `dev` (Debug), `release`, `relwithdebinfo`, `asan` (ASan and UBSan at `-O1`) | `build`, else `build-<preset>` | One shared file that `workspace/tools/sync` writes. Each preset has a build, test and workflow preset: `cmake --workflow --preset dev` configures, builds and tests. The test presets set `noTestsAction` to `error`. PlasmaZones also turns on `BUILD_TOOLS`, Afterglow `AFTERGLOW_BUILD_TOOLS`. |
-| `workspace` superbuild | `dev` (Debug), `release`, `relwithdebinfo`, `asan`, and one app alone: `plasmazones`, `lambent`, `afterglow`, each with an `-asan` twin | `build`, else `build-<preset>` | Builds every library from its sibling checkout. Builds and tests run 3 jobs. |
+| `workspace` superbuild | `dev` (Debug), `release`, `relwithdebinfo`, `asan`, and one app alone: `plasmazones`, `lambent`, `afterglow`, each with an `-asan` twin | `build`, else `build-<preset>` | Builds every library from its sibling checkout, and no tests. Builds run 3 jobs. |
 
 Read the repository's `CMakePresets.json` when you need more: presets change, and this table can fall behind.
 
@@ -33,6 +33,8 @@ The superbuild is for a change that spans a library and an app. It builds each l
 in place of the commit the app pins (it sets `CPM_<library>_SOURCE`), and CPM prints one expected "version
 overridden" warning per library. An app's own presets build the pinned commits, as its CI and packages do. A
 failure in the superbuild that an app's CI does not show usually means that app's pin is behind a library's `main`.
+It builds no tests: run each repository's tests in its own build, a library's against its own tree and an app's
+against the library checkout (`-DCPM_<library>_SOURCE`).
 
 ## Check what a build dir is
 
@@ -145,8 +147,7 @@ not build as unity, so this gate does not apply to it. A repository with no
   `cmake/<Project>Dependencies.cmake`. The first configure of a fresh tree downloads the pinned archives with CPM
   into `.cache/cpm`, which every build dir of that repository shares.
 - With no network, pass `-DPHOSPHOR_DEPS_ARCHIVES=<dir>` holding the archives, filled beforehand with
-  `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/<Project>Dependencies.cmake`. Afterglow names them
-  `AFTERGLOW_DEPS_ARCHIVES` and `AFTERGLOW_DEPS_FETCH`.
+  `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/<Project>Dependencies.cmake`.
 - To build against a library change before the pin moves, use the `workspace` superbuild, or pass
   `-DCPM_<library>_SOURCE=<checkout>` to one build dir.
 - Move a pin after the library change merges: VERSION, URL, FILE and SHA256 together, with the hash of the
