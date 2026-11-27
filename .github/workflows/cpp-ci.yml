@@ -21,7 +21,9 @@
 #     With `variant-configure-args`, one more Arch job configures with those
 #     arguments, for a build option that changes what is compiled. With
 #     `test-display`, the tests run under xvfb-run with Mesa's software
-#     renderer. Each test run gets a private XDG_RUNTIME_DIR. With `ci-images`
+#     renderer. Each test run gets a private XDG_RUNTIME_DIR. The jobs build
+#     with every core of the runner and link with mold, and they save the
+#     compiler cache also when the build or a test fails. With `ci-images`
 #     the jobs run in the suite's CI images from the packaging repository.
 #   * Lint: clang-format and qmlformat over every tracked C++ and QML file.
 #   * Nix, where the repository has a flake: `nix flake check` (the package
@@ -183,6 +185,8 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t packages < <(sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' "$PACKAGES")
+          # mold, the linker of every build job (see Configure).
+          packages+=(mold)
           for try in 1 2 3; do
             $INSTALL "${packages[@]}" && exit 0
             [ "$try" = 3 ] && exit 1
@@ -215,7 +219,10 @@ jobs:
 
       # Saved on every run under a new key, restored from the newest one, so a
       # pull request starts from main's cache and only recompiles what it
-      # changed. Each project turns ccache on when it finds it.
+      # changed. Saved right after the build, also when the build or a later
+      # step fails: what compiled is still good, and a run that saved nothing
+      # made the next run start cold. Each project turns ccache on when it
+      # finds it.
       - name: Set up the compiler cache
         run: |
           {
@@ -228,7 +235,8 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Restore the compiler cache
-        uses: actions/cache@v5
+        id: ccache-restore
+        uses: actions/cache/restore@v5
         with:
           path: .ccache
           key: ccache-${{ matrix.distro }}-${{ inputs.preset }}-${{ github.ref_name }}-${{ github.run_id }}
@@ -244,9 +252,11 @@ jobs:
           ARGS: ${{ inputs.variant-configure-args }}
         run: echo "CONFIGURE_ARGS=$ARGS" >> "$GITHUB_ENV"
 
+      # mold links much faster than ld.bfd, and a repository with many test
+      # programs spends much of a build in the linker. CONFIGURE_ARGS is empty
+      # but in the Clang and variant jobs.
       - name: Configure
-        # CONFIGURE_ARGS is empty but in the Clang and variant jobs.
-        run: cmake --preset "$PRESET" ${CONFIGURE_ARGS:-}
+        run: cmake --preset "$PRESET" -DCMAKE_LINKER_TYPE=MOLD ${CONFIGURE_ARGS:-}
 
       # ccache replays the warnings of a cached compile, so a warning fails
       # every build until it is fixed, not only the first. -k 0 reports every
@@ -257,13 +267,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cmake --build --preset "$PRESET" -- -k 0 2>&1 | tee "$RUNNER_TEMP/build.log"
+          # Every core of the runner: the presets build with 3 jobs, the
+          # memory cap of a desktop.
+          cmake --build --preset "$PRESET" -j "$(nproc)" -- -k 0 2>&1 | tee "$RUNNER_TEMP/build.log"
           pattern=':[0-9]+:[0-9]+: warning:|^(cc1|cc1plus|gcc|g\+\+|clang|clang\+\+|collect2|lto-wrapper|ld|ld\.bfd|ld\.lld|ld\.gold|/usr/bin/ld): warning:'
           if grep -qE "$pattern" "$RUNNER_TEMP/build.log"; then
             echo "::error::The build has compiler warnings:"
             grep -E -B2 -A2 "$pattern" "$RUNNER_TEMP/build.log"
             exit 1
           fi
+
+      - name: Save the compiler cache
+        # always(): a job that its time limit cancels saves what it compiled too.
+        if: ${{ always() && steps.ccache-restore.outcome == 'success' }}
+        uses: actions/cache/save@v5
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.distro }}-${{ inputs.preset }}-${{ github.ref_name }}-${{ github.run_id }}
 
       # The container has no session, so XDG_RUNTIME_DIR is unset, and Qt warns
       # about it the first time a test asks QStandardPaths. A test that fails on
