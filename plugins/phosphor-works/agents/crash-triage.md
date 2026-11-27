@@ -100,7 +100,7 @@ From the faulting frame, find the object or value that was bad, then where it ca
 
 ## In Lambent
 
-- **Host processes.** The user's own shell and `phosphorctl` targets. The nested session is `$XDG_RUNTIME_DIR/lambent-nested` (`scripts/nested-shell/`, `LAMBENT_NESTED_SESSION=<name>` for another).
+- **Host processes.** The user's own shell and `lambentctl` targets. The nested session is `$XDG_RUNTIME_DIR/lambent-nested` (`scripts/nested-shell/`, `LAMBENT_NESTED_SESSION=<name>` for another).
 
 ## Report
 
