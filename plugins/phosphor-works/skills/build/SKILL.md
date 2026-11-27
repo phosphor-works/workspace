@@ -145,8 +145,7 @@ not build as unity, so this gate does not apply to it. A repository with no
   `cmake/<Project>Dependencies.cmake`. The first configure of a fresh tree downloads the pinned archives with CPM
   into `.cache/cpm`, which every build dir of that repository shares.
 - With no network, pass `-DPHOSPHOR_DEPS_ARCHIVES=<dir>` holding the archives, filled beforehand with
-  `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/<Project>Dependencies.cmake`. Afterglow names them
-  `AFTERGLOW_DEPS_ARCHIVES` and `AFTERGLOW_DEPS_FETCH`.
+  `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/<Project>Dependencies.cmake`.
 - To build against a library change before the pin moves, use the `workspace` superbuild, or pass
   `-DCPM_<library>_SOURCE=<checkout>` to one build dir.
 - Move a pin after the library change merges: VERSION, URL, FILE and SHA256 together, with the hash of the

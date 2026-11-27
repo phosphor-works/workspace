@@ -66,12 +66,6 @@ list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 set(QT_MAJOR_VERSION 6)
 include(KDEInstallDirs)
 
-# Afterglow adds phosphor-libs by directory, not through CPM. When an app
-# before it already added the tree it reuses that one, so this only matters
-# when Afterglow is the only app built.
-set(AFTERGLOW_PHOSPHOR_LIBS_DIR "${WORKSPACE_ROOT}/phosphor-libs" CACHE PATH
-    "phosphor-libs checkout for Afterglow" FORCE)
-
 # Apps, in this order. PlasmaZones adds phosphor-libs, phosphor-engine-libs and
 # phosphor-components, Lambent adds phosphor-shell-libs. An app with no
 # CMakeLists.txt yet (an empty repo) is skipped.

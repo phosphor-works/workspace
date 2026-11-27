@@ -85,10 +85,10 @@ starts an `aglow-mux` from `build/`, and the next build breaks it. Never stop, r
 
 ## The Phosphor libraries
 
-`cmake/AfterglowPhosphor.cmake` compiles the Phosphor libraries from the phosphor-libs commit that
-`cmake/AfterglowDependencies.cmake` pins. CPM downloads that commit's archive into the CPM cache. A build directory
-can name a phosphor-libs checkout instead with `-DAFTERGLOW_PHOSPHOR_LIBS_DIR`, to build against a change before the
-pin moves. Each build directory keeps its own value, and the `grep` at the top of this skill shows it. When a build
+`cmake/AfterglowPhosphor.cmake` adds the phosphor-libs commit that `cmake/AfterglowDependencies.cmake` pins as a
+subproject, embedded in Afterglow (`PHOSPHOR_EMBED_APP`). CPM downloads that commit's archive into the CPM cache. A
+build directory can name a phosphor-libs checkout instead with `-DCPM_phosphor-libs_SOURCE`, to build against a change
+before the pin moves. Each build directory keeps its own value, and the `grep` at the top of this skill shows it. When a build
 that names a checkout fails or changes for no reason in this repository, check the checkout first:
 
 | Condition | Check | Action |
@@ -103,7 +103,7 @@ that names a checkout fails or changes for no reason in this repository, check t
 - The pinned archives are phosphor-libs, zlib-ng, xxHash, libpng, libjpeg-turbo, libwebp and Little CMS from
   `cmake/AfterglowDependencies.cmake`, and Luau and jsoncons from `cmake/PhosphorDependencies.cmake` in the pinned
   phosphor-libs tree. Offline, fill the archive directory with
-  `cmake -DAFTERGLOW_DEPS_FETCH=<dir> -P cmake/AfterglowDependencies.cmake`.
+  `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/AfterglowDependencies.cmake`.
 
 ## Build
 
