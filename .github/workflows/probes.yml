@@ -46,7 +46,7 @@ jobs:
         run: |
           docker run --rm --device /dev/udmabuf -v "$PWD/tools/probes:/probes:ro" archlinux:latest bash -euo pipefail -c '
             pacman -Syu --noconfirm --needed gcc libdrm vulkan-headers vulkan-icd-loader vulkan-swrast vulkan-validation-layers >/dev/null
-            pacman -Q mesa vulkan-swrast
+            pacman -Q vulkan-swrast vulkan-icd-loader
             gcc -O1 -Wall -Wextra -Werror -I/usr/include/libdrm -o /tmp/probe /probes/lavapipe-dmabuf.c -lvulkan
             VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.json VK_LOADER_LAYERS_ENABLE="*validation" /tmp/probe 2>&1 | tee /tmp/out
             if grep -q "Validation" /tmp/out; then echo "The validation layer reported a message"; exit 1; fi
