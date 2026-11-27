@@ -32,6 +32,7 @@ development only. `packaging` owns releases, rebuild watching and CI images, and
 | `CMakeLists.txt`, `CMakePresets.json` | The superbuild and its presets: everything (`dev`, `release`, `relwithdebinfo`, `asan`) or one app against the sibling libraries (`plasmazones`, `lambent`, `afterglow`, each with `-asan`) |
 | `tools/setup` | Clones the missing repos, registers this checkout as the plugin marketplace, installs the plugins in each repo, sets up the lesson index |
 | `tools/snapshot` | The exact commit of every repo, as a vcstool manifest |
+| `tools/probes/` | Small programs that `probes.yml` runs on the runners, such as the lavapipe dma-buf import that Phosphor's CI needs |
 | `LICENSES/` | The license texts (REUSE): `GPL-3.0-or-later` for this repo's code, `CC0-1.0` for its configuration, and `LGPL-2.1-or-later`, which `tools/new-repo` copies into a library repository with the other two |
 | `tools/new-repo`, `templates/` | A new library repository or program, generated from the templates with every convention, and registered here (`phosphor-works:new-repo`) |
 | `tools/change` | Change sets: the branch in each repo, the linked pull requests, the status of the set, the superbuild of the set |
@@ -40,7 +41,7 @@ development only. `packaging` owns releases, rebuild watching and CI images, and
 | `claude/conventions.md` | The rules every repo's CLAUDE.md imports |
 | `.claude-plugin/marketplace.json`, `plugins/` | The Claude Code plugins: `phosphor-works` (shared) and one per app |
 | `plugins/phosphor-works/lessons/` | The lessons, one file each, that the lesson index searches |
-| `.github/workflows/` | `cpp-ci.yml` (the CI every C++ repo calls), `flake-update.yml` (weekly `flake.lock` pull requests in every repo with a flake), `superbuild.yml` (nightly, pull requests that change a build input with the change set of their branch, change sets by hand), `templates.yml` (generates a library repository and an app from `templates/` and checks and builds them, when the templates, the generator or `tools/sync` change) and `plugins.yml` |
+| `.github/workflows/` | `cpp-ci.yml` (the CI every C++ repo calls), `flake-update.yml` (weekly `flake.lock` pull requests in every repo with a flake), `superbuild.yml` (nightly, pull requests that change a build input with the change set of their branch, change sets by hand), `templates.yml` (generates a library repository and an app from `templates/` and checks and builds them, when the templates, the generator or `tools/sync` change), `plugins.yml` and `probes.yml` (checks of what the GitHub-hosted runners can do, by hand or when a probe changes) |
 
 ## Build and test
 
