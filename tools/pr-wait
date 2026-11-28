@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Wait for the checks of pull requests, and merge them when they pass.
+
+  tools/pr-wait PR...                    wait until every check of each PR has passed
+  tools/pr-wait --merge PR...            merge each PR when all its checks have passed
+  tools/pr-wait --merge --in-order PR... merge them one after the other, in the given order
+                                         (a change set: libraries first), and stop at the first one
+                                         that does not merge
+
+A PR is REPO#N (a phosphor-works repository), OWNER/REPO#N, or a pull request URL.
+
+Each round asks GitHub once for each PR that is still open (GraphQL, the head commit's
+checks), then sleeps --interval seconds. The result of a PR is final as soon as one of these
+is true, and the tool does not wait for the other checks of that PR:
+
+  failed       a check failed, was cancelled, timed out, or needs action. The tool prints
+               each failing check, its link and the end of its failed log.
+  conflict     the PR cannot merge into its base (it conflicts).
+  closed       the PR was closed without a merge.
+  merged       the PR is merged (by --merge, or by someone else).
+  passed       every check passed or was skipped (without --merge).
+  no-checks    no check started within --no-checks seconds. Some repositories have no CI;
+               with --merge such a PR is merged.
+  draft        with --merge: every check passed, but the PR is a draft. It is not merged.
+  unmergeable  with --merge: every check passed, but GitHub refused the merge (the tool prints why).
+  not-mine     with --merge: someone else opened the PR. The tool never merges it.
+  timeout      --timeout seconds went by first.
+  stopped      the tool stopped before this PR had a result: another PR failed first (see
+               --keep-going), or, with --in-order, a PR before it did not merge.
+
+The first PR that ends badly (failed, conflict, closed, draft, unmergeable, not-mine) ends the wait
+for all of them, so an agent learns of a failure at once. --keep-going waits for every PR
+instead.
+
+Exit status: 0 when every PR passed or merged, 1 when one failed, 2 when one has a
+conflict, is a draft, closed, unmergeable or not-mine (or was stopped), 3 on a timeout.
+Run it in the background and read its output: one line for each PR, then a summary.
+
+Needs an authenticated gh.
+"""
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import time
+
+OWNER = 'phosphor-works'
+FAILED = {'FAILURE', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE', 'ERROR', 'STALE'}
+PASSED = {'SUCCESS', 'SKIPPED', 'NEUTRAL'}
+QUERY = '''
+query($owner: String!, $repo: String!, $number: Int!) {
+  viewer { login }
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      state isDraft mergeable url author { login }
+      commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes {
+        __typename
+        ... on CheckRun { name status conclusion detailsUrl }
+        ... on StatusContext { context state targetUrl }
+      } } } } } }
+    }
+  }
+}'''
+EXIT = {'passed': 0, 'merged': 0, 'no-checks': 0, 'failed': 1, 'conflict': 2, 'closed': 2, 'draft': 2,
+        'unmergeable': 2, 'not-mine': 2, 'stopped': 2, 'timeout': 3}
+BAD = ('failed', 'conflict', 'closed', 'draft', 'unmergeable', 'not-mine')
+
+
+def parse(spec):
+    """(owner, repo, number) of a PR given as REPO#N, OWNER/REPO#N or a URL."""
+    m = re.search(r'github\.com/([^/]+)/([^/]+)/pull/(\d+)', spec)
+    if m:
+        return m.group(1), m.group(2), int(m.group(3))
+    m = re.fullmatch(r'(?:([\w.-]+)/)?([\w.-]+)[#:](\d+)', spec)
+    if not m:
+        sys.exit(f'pr-wait: not a pull request: {spec!r} (use REPO#N, OWNER/REPO#N or a URL)')
+    return m.group(1) or OWNER, m.group(2), int(m.group(3))
+
+
+def checks(contexts):
+    """[(name, state, link)] of a commit's check runs and statuses. state is PENDING until a
+    check ends, then its conclusion: an empty conclusion means that the check still runs."""
+    out = []
+    for c in contexts:
+        if c['__typename'] == 'CheckRun':
+            state = c['conclusion'] if c.get('conclusion') else 'PENDING'
+            out.append((c['name'], state, c.get('detailsUrl') or ''))
+        else:
+            state = c.get('state') or 'PENDING'
+            out.append((c['context'], 'PENDING' if state in ('PENDING', 'EXPECTED') else state,
+                        c.get('targetUrl') or ''))
+    return out
+
+
+def classify(pr, found, merge):
+    """The result of one PR, or None while it waits: from its state and checks (see the module text)."""
+    if pr['state'] == 'MERGED':
+        return 'merged'
+    if pr['state'] == 'CLOSED':
+        return 'closed'
+    if pr.get('mergeable') == 'CONFLICTING':
+        return 'conflict'
+    if any(state in FAILED for _, state, _ in found):
+        return 'failed'
+    if found and all(state in PASSED for _, state, _ in found):
+        if merge and not pr.get('mine', True):
+            return 'not-mine'
+        return 'draft' if merge and pr.get('isDraft') else 'passed'
+    return None
+
+
+def gh(*args):
+    return subprocess.run(['gh', *args], capture_output=True, text=True)
+
+
+def fetch(owner, repo, number):
+    r = gh('api', 'graphql', '-f', f'query={QUERY}', '-F', f'owner={owner}', '-F', f'repo={repo}',
+           '-F', f'number={number}')
+    if r.returncode:
+        return None, r.stderr.strip()
+    data = json.loads(r.stdout)['data']
+    pr = data['repository']['pullRequest']
+    pr['mine'] = (pr.get('author') or {}).get('login') == data['viewer']['login']
+    nodes = pr['commits']['nodes']
+    rollup = nodes[0]['commit']['statusCheckRollup'] if nodes else None
+    return pr, checks(rollup['contexts']['nodes'] if rollup else [])
+
+
+def failed_log(owner, repo, link, lines=25):
+    """The end of the failed steps' log of a GitHub Actions job, or ''."""
+    m = re.search(r'/actions/runs/(\d+)/job/(\d+)', link)
+    if not m:
+        return ''
+    r = gh('run', 'view', m.group(1), '-R', f'{owner}/{repo}', '--job', m.group(2), '--log-failed')
+    text = re.sub(r'\x1b\[[0-9;]*m', '', r.stdout)
+    rows = [row.split('\t', 2)[-1] for row in text.splitlines() if row.strip()]
+    errors = [row for row in rows if re.search(r'error|warning:|FAIL|Failed|\(Timeout\)', row)]
+    picked = errors[-lines:] if errors else rows[-lines:]
+    return '\n'.join('      ' + re.sub(r'^\S+Z ', '', row)[:200] for row in picked)
+
+
+def merge_pr(owner, repo, number):
+    r = gh('pr', 'merge', str(number), '-R', f'{owner}/{repo}', '--merge', '--delete-branch')
+    return r.returncode == 0, (r.stderr or r.stdout).strip().splitlines()[:1]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0],
+                                     formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
+    parser.add_argument('prs', nargs='+', metavar='PR')
+    parser.add_argument('--merge', action='store_true', help='merge each PR when all its checks pass')
+    parser.add_argument('--in-order', action='store_true',
+                        help='with --merge: merge in the given order, and stop at the first PR that does not merge')
+    parser.add_argument('--keep-going', action='store_true',
+                        help='wait for every PR, also after one ends badly (not with --in-order)')
+    parser.add_argument('--interval', type=int, default=60, help='seconds between rounds (default 60)')
+    parser.add_argument('--timeout', type=int, default=4 * 3600, help='seconds before it gives up (default 4 h)')
+    parser.add_argument('--no-checks', type=int, default=600,
+                        help='seconds with no check before a PR counts as having none (default 600)')
+    args = parser.parse_args()
+    if args.in_order and not args.merge:
+        parser.error('--in-order needs --merge')
+    if args.in_order and args.keep_going:
+        parser.error('--in-order stops at the first PR that does not merge: it cannot --keep-going')
+
+    prs = [parse(p) for p in args.prs]
+    names = {p: f'{p[1]}#{p[2]}' for p in prs}
+    result, seen_check = {}, {}
+    start = time.monotonic()
+    while True:
+        waiting = [p for p in prs if p not in result]
+        if args.in_order:
+            waiting = waiting[:1]
+        for p in waiting:
+            pr, found = fetch(*p)
+            if pr is None:
+                print(f'{time.strftime("%H:%M:%S")} {names[p]}: GitHub did not answer ({found}); trying again',
+                      flush=True)
+                continue
+            if found:
+                seen_check[p] = True
+            state = classify(pr, found, args.merge)
+            if state is None and not found and not seen_check.get(p) and time.monotonic() - start > args.no_checks:
+                state = 'no-checks'
+            if state is None:
+                continue
+            if args.merge and state == 'no-checks' and not pr['mine']:
+                state = 'not-mine'
+            if args.merge and state in ('passed', 'no-checks'):
+                ok, why = merge_pr(*p)
+                if ok:
+                    state = 'merged'
+                else:
+                    print(f'{time.strftime("%H:%M:%S")} {names[p]}: merge refused: {" ".join(why)}', flush=True)
+                    state = 'unmergeable'
+            result[p] = state
+            print(f'{time.strftime("%H:%M:%S")} {names[p]}: {state}', flush=True)
+            if state == 'failed':
+                for name, check_state, link in found:
+                    if check_state in FAILED:
+                        print(f'    {name}: {check_state} {link}', flush=True)
+                        log = failed_log(p[0], p[1], link)
+                        if log:
+                            print(log, flush=True)
+            if (args.in_order and state != 'merged') or (state in BAD and not args.keep_going):
+                for q in prs:
+                    result.setdefault(q, 'stopped')
+                break
+        if len(result) == len(prs):
+            break
+        if time.monotonic() - start > args.timeout:
+            for p in prs:
+                result.setdefault(p, 'timeout')
+            break
+        time.sleep(args.interval)
+
+    worst = max(EXIT[s] for s in result.values())
+    print(f'{time.strftime("%H:%M:%S")} done: ' + ', '.join(f'{names[p]} {result[p]}' for p in prs), flush=True)
+    return worst
+
+
+if __name__ == '__main__':
+    sys.exit(main())
