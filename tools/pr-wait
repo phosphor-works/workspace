@@ -136,8 +136,10 @@ def failed_log(owner, repo, link, lines=25):
     if not m:
         return ''
     r = gh('run', 'view', m.group(1), '-R', f'{owner}/{repo}', '--job', m.group(2), '--log-failed')
-    text = re.sub(r'\x1b\[[0-9;]*m', '', r.stdout)
-    rows = [row.split('\t', 2)[-1] for row in text.splitlines() if row.strip()]
+    rows = [row.split('\t', 2)[-1] for row in r.stdout.splitlines() if row.strip()]
+    # The runner echoes each step's script in cyan (ESC[36;1m, which gh can print as ^[[36;1m): leave it out.
+    rows = [row for row in rows if not re.search(r'(\x1b|\^\[)\[36;1m', row)]
+    rows = [re.sub(r'(\x1b|\^\[)\[[0-9;]*m', '', row) for row in rows]
     errors = [row for row in rows if re.search(r'error|warning:|FAIL|Failed|\(Timeout\)', row)]
     picked = errors[-lines:] if errors else rows[-lines:]
     return '\n'.join('      ' + re.sub(r'^\S+Z ', '', row)[:200] for row in picked)
