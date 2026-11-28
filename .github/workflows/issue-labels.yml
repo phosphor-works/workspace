@@ -1,0 +1,87 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: CC0-1.0
+#
+# Labels every workspace issue, however it was made (an issue form, gh or the
+# API):
+#
+#   * The Repositories and Areas answers of an issue form become `repo: NAME`
+#     and `area: NAME` labels. A form sets the type label itself.
+#   * An issue with no `repo:` label or no type label (bug, enhancement,
+#     documentation, decision) gets `needs-triage`. It loses that label when
+#     both are there, also when someone adds them by hand.
+#
+# Labels that this workflow adds with GITHUB_TOKEN start no new run, so it
+# cannot loop.
+
+name: Issue labels
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: issue-labels-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Apply the labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          ACTION: ${{ github.event.action }}
+        shell: python
+        run: |
+          import json, os, re, subprocess
+
+          repo, number = os.environ['REPO'], os.environ['NUMBER']
+          types = {'bug', 'enhancement', 'documentation', 'decision'}
+
+          def gh(*args):
+              return subprocess.run(['gh', *args], check=True, capture_output=True, text=True).stdout
+
+          issue = json.loads(gh('issue', 'view', number, '-R', repo, '--json', 'body,labels'))
+          have = {label['name'] for label in issue['labels']}
+          known = set(gh('label', 'list', '-R', repo, '--limit', '200', '--json', 'name', '-q', '.[].name').split('\n'))
+
+          def answer(heading):
+              """The answer under `### heading` of an issue form, as a list of names."""
+              match = re.search(rf'^### {heading}\s*\n+(.*?)(?=\n### |\Z)', issue['body'] or '', re.S | re.M)
+              text = match.group(1).strip() if match else ''
+              if not text or text == '_No response_':
+                  return []
+              return [part.strip() for part in text.split(',') if part.strip()]
+
+          add = set()
+          # Only an opened or edited issue has new form answers to read.
+          if os.environ['ACTION'] in ('opened', 'edited', 'reopened'):
+              add |= {f'repo: {name}' for name in answer('Repositories')}
+              add |= {f'area: {name}' for name in answer('Areas')}
+          unknown = sorted(add - known)
+          if unknown:
+              print('No such label, not added:', ', '.join(unknown))
+          add = (add & known) - have
+
+          after = have | add
+          complete = any(name.startswith('repo: ') for name in after) and bool(after & types)
+          remove = set()
+          if complete and 'needs-triage' in after:
+              remove.add('needs-triage')
+          elif not complete and 'needs-triage' not in after:
+              add.add('needs-triage')
+
+          args = []
+          for name in sorted(add):
+              args += ['--add-label', name]
+          for name in sorted(remove):
+              args += ['--remove-label', name]
+          if args:
+              gh('issue', 'edit', number, '-R', repo, *args)
+          print('added:', sorted(add) or 'nothing', '| removed:', sorted(remove) or 'nothing')
