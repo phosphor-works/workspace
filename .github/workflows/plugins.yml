@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Checks the Claude Code plugins on every change to them: the guard's tests,
-# the shell scripts, and that every manifest and hooks file is valid JSON with
+# the tests of tools/pr-wait (which the pr-wait skill runs), the shell scripts, and that every manifest and hooks file is valid JSON with
 # the plugins the marketplace lists.
 
 name: Plugins
@@ -10,9 +10,9 @@ name: Plugins
 on:
   push:
     branches: [main]
-    paths: [".claude-plugin/**", "plugins/**", ".github/workflows/plugins.yml"]
+    paths: [".claude-plugin/**", "plugins/**", "tools/pr-wait", "tools/test_pr_wait.py", ".github/workflows/plugins.yml"]
   pull_request:
-    paths: [".claude-plugin/**", "plugins/**", ".github/workflows/plugins.yml"]
+    paths: [".claude-plugin/**", "plugins/**", "tools/pr-wait", "tools/test_pr_wait.py", ".github/workflows/plugins.yml"]
   workflow_dispatch:
 
 permissions:
@@ -28,6 +28,9 @@ jobs:
 
       - name: Guard tests
         run: python3 -I plugins/phosphor-works/hooks/guard/test_guard.py
+
+      - name: pr-wait tests
+        run: python3 -I tools/test_pr_wait.py
 
       - name: Shell scripts
         run: |

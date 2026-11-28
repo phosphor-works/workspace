@@ -76,8 +76,9 @@ of order.
   as its own fixture or reads it as data, so the example cannot fall behind.
 - Work on a branch. Never push to `main`. Stage files by name, never with `git add -A` or `git add .`.
 - Land work through a pull request, and merge your own pull request when every check passes. A flaky check gets a
-  root-cause fix, not a re-run. Leave pull requests that you did not open alone: the user's, other sessions' and
-  contributors'.
+  root-cause fix, not a re-run. Wait for checks and merge with `workspace/tools/pr-wait` (`phosphor-works:pr-wait`),
+  never with a polling loop of your own. Leave pull requests that you did not open alone: the user's, other
+  sessions' and contributors'.
 
 ## Issues
 
