@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: CC0-1.0
+
+name: Documentation
+description: "A README, a docs/ page or a CLAUDE.md that is missing, wrong or out of date."
+labels: [documentation]
+body:
+  - type: dropdown
+    id: repositories
+    attributes:
+      label: Repositories
+      description: "Each repository that the work changes. The issue gets a `repo:` label for each one."
+      multiple: true
+      options:
+        - PlasmaZones
+        - Lambent
+        - Afterglow
+        - Facet
+        - Phosphor
+        - phosphor-libs
+        - phosphor-engine-libs
+        - phosphor-shell-libs
+        - phosphor-components
+        - packaging
+        - workspace
+        - design-language
+        - branding
+    validations:
+      required: true
+  - type: dropdown
+    id: areas
+    attributes:
+      label: Areas
+      description: "The themes across repositories that the work belongs to, if any. Each gets an `area:` label."
+      multiple: true
+      options:
+        - ci
+        - packaging
+        - testing
+        - performance
+    validations:
+      required: false
+  - type: textarea
+    id: what
+    attributes:
+      label: What to change
+      description: "The page and what is wrong or missing."
+    validations:
+      required: true

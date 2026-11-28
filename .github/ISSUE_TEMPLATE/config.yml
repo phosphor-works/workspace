@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: CC0-1.0
+
+# Every issue comes from a form, so that it gets its type, repository and area
+# labels (.github/workflows/issue-labels.yml).
+blank_issues_enabled: false

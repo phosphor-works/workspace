@@ -334,7 +334,14 @@ def current_branch(directory):
 
 # Messages. The repository's CONFIG overrides any of them, and names its applications there.
 
+# The type labels of a workspace issue (see "Issues" in claude/conventions.md).
+ISSUE_TYPES = ('bug', 'enhancement', 'documentation', 'decision')
+
 MESSAGES = {
+    'issue_labels': ('A workspace issue needs a `repo: NAME` label for each repository it changes and a type label '
+                     '(bug, enhancement, documentation or decision): gh issue create -R phosphor-works/workspace '
+                     '--label "repo: NAME" --label enhancement. Add an area label and the milestone where they fit. '
+                     'See "Issues" in claude/conventions.md.'),
     'broad': 'Stage files by name (git add path...), not with -A, -u, ., *, :/ or commit -a.',
     'push': 'Never force-push. Fix the branch with a new commit instead.',
     'push_main': ('Never push to main. Push a branch and open a pull request. The user merges it. '
@@ -538,8 +545,36 @@ class Guard:
             return self.message('install')
         if word == 'git' and (message := self.check_git(args, scope.places)):
             return message
+        if word == 'gh' and self.unlabeled_workspace_issue(args, scope.places):
+            return self.message('issue_labels')
         check = getattr(self.repo, 'check', None)
         return check(cmd, self, scope) if check else None
+
+    def unlabeled_workspace_issue(self, args, places):
+        """Whether gh issue create makes a workspace issue without a repo label and a type label. The target is -R
+        or --repo, or else the checkout the command runs in. --web opens the issue form, which asks for them."""
+        if args[:2] != ['issue', 'create'] or '--web' in args or '-w' in args:
+            return False
+        repo, labels = None, []
+        for k, a in enumerate(args):
+            value = args[k + 1] if k + 1 < len(args) else ''
+            if a in ('-R', '--repo'):
+                repo = value
+            elif a.startswith('--repo='):
+                repo = a.split('=', 1)[1]
+            elif a in ('-l', '--label'):
+                labels += value.split(',')
+            elif a.startswith('--label='):
+                labels += a.split('=', 1)[1].split(',')
+        if repo is not None:
+            if repo.rstrip('/').split('/')[-1] != 'workspace':
+                return False
+        elif not any(place != UNKNOWN and os.path.basename(toplevel(place) or '') == 'workspace' for place in places):
+            return False
+        labels = [label.strip() for label in labels]
+        has_repo = any(label.startswith('repo: ') for label in labels)
+        has_type = any(label in ISSUE_TYPES for label in labels)
+        return not (has_repo and has_type)
 
     def temporary_destination(self, cmd):
         """Whether an install goes into a temporary directory: DESTDIR on the command itself, or --prefix,

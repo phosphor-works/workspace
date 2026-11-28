@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Phosphor Works Team
+# SPDX-License-Identifier: CC0-1.0
+
+name: Enhancement
+description: "New work: a feature, a change or a test."
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: repositories
+    attributes:
+      label: Repositories
+      description: "Each repository that the work changes. The issue gets a `repo:` label for each one."
+      multiple: true
+      options:
+        - PlasmaZones
+        - Lambent
+        - Afterglow
+        - Facet
+        - Phosphor
+        - phosphor-libs
+        - phosphor-engine-libs
+        - phosphor-shell-libs
+        - phosphor-components
+        - packaging
+        - workspace
+        - design-language
+        - branding
+    validations:
+      required: true
+  - type: dropdown
+    id: areas
+    attributes:
+      label: Areas
+      description: "The themes across repositories that the work belongs to, if any. Each gets an `area:` label."
+      multiple: true
+      options:
+        - ci
+        - packaging
+        - testing
+        - performance
+    validations:
+      required: false
+  - type: textarea
+    id: what
+    attributes:
+      label: What to do
+      description: "What the work is and why."
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: "How to tell that the work is finished."
+    validations:
+      required: true

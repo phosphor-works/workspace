@@ -79,6 +79,23 @@ of order.
   root-cause fix, not a re-run. Leave pull requests that you did not open alone: the user's, other sessions' and
   contributors'.
 
+## Issues
+
+Planned work across the suite is an issue in the `workspace` repository, with these labels:
+
+| Label | When |
+| --- | --- |
+| Type: `bug`, `enhancement`, `documentation` or `decision` | Always one. `decision` is a choice that must be made before the work can start. |
+| `repo: NAME` | One for each repository that the work changes. |
+| `area: ci`, `area: packaging`, `area: testing`, `area: performance` | When the work belongs to one of these themes. |
+| A milestone (`Packaging phase 0`, `PlasmaZones 4.0 (Facet)`, `Phosphor compositor`) | When the work is part of that plan. |
+
+- In the browser, open an issue from a form. The form asks for the repositories and areas, and
+  `.github/workflows/issue-labels.yml` turns the answers into labels.
+- With gh, pass the labels: `gh issue create -R phosphor-works/workspace --label "repo: NAME" --label enhancement`.
+  The command guard blocks a workspace issue with no `repo:` label or no type label.
+- An issue that still has no `repo:` label or no type label gets `needs-triage`, until someone adds them.
+
 ## Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) in every repository.

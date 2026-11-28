@@ -149,6 +149,24 @@ class SharedRules(Case):
         self.allowed('git commit -m "fix: add -A handling"')
         self.allowed("git commit -F - <<'EOF'\ngit add -A\nEOF")
 
+    def test_workspace_issue_labels(self):
+        ws = 'gh issue create -R phosphor-works/workspace --title T --body B'
+        self.blocked(ws, self.msg('issue_labels'))
+        self.blocked(ws + ' --label enhancement', self.msg('issue_labels'))
+        self.blocked(ws + ' --label "repo: Lambent"', self.msg('issue_labels'))
+        self.allowed(ws + ' --label "repo: Lambent" --label enhancement')
+        self.allowed(ws + ' -l "repo: Lambent,area: ci" -l bug')
+        self.allowed(ws + ' --label="repo: PlasmaZones" --label=decision')
+        self.allowed('gh issue create -R phosphor-works/workspace --web')
+        self.allowed('gh issue create -R phosphor-works/PlasmaZones --title T --body B')
+        self.allowed('gh issue list -R phosphor-works/workspace')
+        with tempfile.TemporaryDirectory() as tmp:
+            checkout = git_repo(os.path.join(tmp, 'workspace'))
+            self.blocked('gh issue create --title T --body B', self.msg('issue_labels'), cwd=checkout)
+            self.allowed('gh issue create --title T --body B --label "repo: workspace" --label bug', cwd=checkout)
+            other = git_repo(os.path.join(tmp, 'Lambent'))
+            self.allowed('gh issue create --title T --body B', cwd=other)
+
     def test_push(self):
         self.blocked('git push --force origin feat', self.msg('push'))
         self.blocked('git push origin +feat', self.msg('push'))
